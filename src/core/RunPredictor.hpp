@@ -17,7 +17,7 @@ class RunPredictor final {
 public:
     static RunPredictor& get();
 
-    void resetLevel();
+    void resetLevel(float existingBest = 0.f);
     void startAttempt();
     void observeProgress(float percent);
     void recordDeath(float percent);
