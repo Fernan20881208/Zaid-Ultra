@@ -2,10 +2,13 @@
 
 #include "../core/RunPredictor.hpp"
 #include "../core/SmartDetail.hpp"
+#include "../core/SmartDetailRenderer.hpp"
 #include "../core/Telemetry.hpp"
+#include "../platform/AndroidGuardian.hpp"
 
 #include <Geode/ui/GeodeUI.hpp>
 #include <algorithm>
+#include <cmath>
 
 using namespace geode::prelude;
 
@@ -28,6 +31,14 @@ char const* tierName(DetailTier tier) {
         case DetailTier::ULDM: return "ULDM";
         default: return "Normal";
     }
+}
+
+float currentTargetFps() {
+    auto director = CCDirector::get();
+    if (!director) return 60.f;
+    const double interval = director->getAnimationInterval();
+    if (!std::isfinite(interval) || interval <= 0.0) return 60.f;
+    return std::clamp(static_cast<float>(std::round(1.0 / interval)), 30.f, 1000.f);
 }
 
 } // namespace
@@ -143,33 +154,42 @@ void ZaidUltraPopup::addValueRow(char const* label, std::string const& value, fl
 void ZaidUltraPopup::renderTab() {
     clearContent();
 
+    const float fpsTarget = currentTargetFps();
+    const float budgetMs = 1000.f / fpsTarget;
     const auto frame = Telemetry::get().snapshot();
     const auto run = RunPredictor::get().prediction();
-    const auto detail = SmartDetail::get().decision(Telemetry::get().currentPercent(), 120.f);
+    const auto detail = SmartDetail::get().decision(Telemetry::get().currentPercent(), fpsTarget);
+    const auto renderer = SmartDetailRenderer::get().stats();
+    const auto guardian = AndroidGuardian::get().snapshot();
+    const auto worst = Telemetry::get().worstSection(fpsTarget);
 
     switch (m_tab) {
         case UltraTab::Dashboard:
-            addHeader("Ultra Dashboard", "One suite. Shared telemetry. Zero duplicated profilers.");
+            addHeader("Ultra Dashboard", "Performance, gameplay intelligence and adaptive visuals");
             addValueRow("Frame pacing", fmt::format("{:.0f}/100", frame.framePacingScore), 128.f);
-            addValueRow("Benchmark", fmt::format("{:.0f}/100", Telemetry::get().performanceScore(120.f)), 101.f);
+            addValueRow("Level benchmark", fmt::format("{:.0f}/100", Telemetry::get().levelPerformanceScore(fpsTarget)), 101.f);
             addValueRow("Run momentum", fmt::format("{:.0f}%", run.pbMomentum), 74.f);
             addValueRow("Smart detail", tierName(SmartDetail::get().activeTier()), 47.f);
             break;
 
         case UltraTab::Performance:
-            addHeader("Performance Lab", "Frame Doctor + Guardian + automatic benchmark");
-            addToggleRow("Frame Doctor", "frame-doctor", 100, 128.f);
-            addToggleRow("Android Guardian", "android-guardian", 101, 99.f);
-            addToggleRow("Auto Benchmark", "auto-benchmark", 102, 70.f);
-            addValueRow("Avg / 1% low", fmt::format("{:.2f} ms / {:.0f} FPS", frame.averageFrameMs, frame.onePercentLowFps), 39.f);
+            addHeader("Performance Lab", "Frame Doctor + heatmap + automatic benchmark");
+            addToggleRow("Frame Doctor", "frame-doctor", 100, 130.f);
+            addToggleRow("Android Guardian", "android-guardian", 101, 105.f);
+            addToggleRow("Auto Benchmark", "auto-benchmark", 102, 80.f);
+            addValueRow("Avg / 1% low", fmt::format("{:.2f} ms / {:.0f} FPS", frame.averageFrameMs, frame.onePercentLowFps), 50.f);
+            addValueRow("Worst section", worst.valid
+                ? fmt::format("{:.0f}-{:.0f}%  {:.2f} ms", worst.startPercent, worst.endPercent, worst.averageFrameMs)
+                : "Learning...", 25.f);
             break;
 
         case UltraTab::SmartDetail:
-            addHeader("Smart LDM / ULDM", "Learns heavy sections and predicts them before the drop");
-            addToggleRow("Adaptive detail", "smart-detail", 103, 126.f);
-            addValueRow("Active tier", tierName(SmartDetail::get().activeTier()), 94.f);
-            addValueRow("Predicted tier", tierName(detail.tier), 69.f);
-            addValueRow("Learned / budget", fmt::format("{:.2f} / {:.2f} ms", detail.learnedFrameMs, detail.budgetMs), 44.f);
+            addHeader("Smart LDM / ULDM", "Predictive quality changes only in heavy sections");
+            addToggleRow("Adaptive detail", "smart-detail", 103, 130.f);
+            addValueRow("Active / predicted", fmt::format("{} / {}", tierName(SmartDetail::get().activeTier()), tierName(detail.tier)), 100.f);
+            addValueRow("Learned / budget", fmt::format("{:.2f} / {:.2f} ms", detail.learnedFrameMs, detail.budgetMs), 75.f);
+            addValueRow("High detail / decor", fmt::format("{} / {}", renderer.highDetailObjects, renderer.decorationObjects), 50.f);
+            addValueRow("Hidden now", fmt::format("{} objects", renderer.hiddenObjects), 25.f);
             break;
 
         case UltraTab::Gameplay:
@@ -207,11 +227,18 @@ void ZaidUltraPopup::renderTab() {
         }
 
         case UltraTab::Android:
-            addHeader("Android Guardian", "Mobile-first performance policy for high-refresh gameplay");
-            addToggleRow("Guardian", "android-guardian", 106, 126.f);
-            addValueRow("Target frame budget", "120 FPS / 8.33 ms", 94.f);
-            addValueRow("Smart Detail link", Mod::get()->getSettingValue<bool>("smart-detail") ? "Connected" : "Disabled", 68.f);
-            addValueRow("Thermal sensors", "Platform adapter next", 42.f);
+            addHeader("Android Guardian", "Live mobile telemetry with graceful sensor fallback");
+            addToggleRow("Guardian", "android-guardian", 106, 130.f);
+            addValueRow("Target / budget", fmt::format("{:.0f} FPS / {:.2f} ms", fpsTarget, budgetMs), 100.f);
+            addValueRow("Thermal sensor", guardian.thermalAvailable
+                ? fmt::format("{:.1f} C", guardian.temperatureC)
+                : "Unavailable", 75.f);
+            addValueRow("CPU average", guardian.cpuAvailable
+                ? fmt::format("{:.0f} MHz", guardian.averageCpuMHz)
+                : "Unavailable", 50.f);
+            addValueRow("GPU clock", guardian.gpuAvailable
+                ? fmt::format("{:.0f} MHz", guardian.gpuMHz)
+                : "Unavailable", 25.f);
             break;
     }
 }
