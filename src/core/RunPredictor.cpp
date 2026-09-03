@@ -10,6 +10,14 @@ RunPredictor& RunPredictor::get() {
     return instance;
 }
 
+void RunPredictor::resetLevel() {
+    m_deaths.clear();
+    m_current = 0.f;
+    m_best = 0.f;
+    m_attempts = 0;
+    m_completions = 0;
+}
+
 void RunPredictor::startAttempt() {
     m_current = 0.f;
     ++m_attempts;
