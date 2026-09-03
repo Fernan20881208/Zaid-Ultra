@@ -10,10 +10,10 @@ RunPredictor& RunPredictor::get() {
     return instance;
 }
 
-void RunPredictor::resetLevel() {
+void RunPredictor::resetLevel(float existingBest) {
     m_deaths.clear();
     m_current = 0.f;
-    m_best = 0.f;
+    m_best = std::clamp(existingBest, 0.f, 100.f);
     m_attempts = 0;
     m_completions = 0;
 }
