@@ -6,7 +6,12 @@
 #include "core/Telemetry.hpp"
 #include "core/RunPredictor.hpp"
 #include "core/SmartDetail.hpp"
+#include "core/SmartDetailRenderer.hpp"
+#include "platform/AndroidGuardian.hpp"
 #include "ui/ZaidUltraPopup.hpp"
+
+#include <algorithm>
+#include <cmath>
 
 using namespace geode::prelude;
 using namespace zaidultra;
@@ -14,9 +19,17 @@ using namespace zaidultra;
 namespace {
 
 float targetFps() {
-    // v0.1 foundation target. Android Guardian will replace this with the
-    // active display/game target in the platform adapter.
-    return 120.f;
+    auto director = CCDirector::get();
+    if (!director) {
+        return 60.f;
+    }
+
+    const double interval = director->getAnimationInterval();
+    if (!std::isfinite(interval) || interval <= 0.0) {
+        return 60.f;
+    }
+
+    return std::clamp(static_cast<float>(std::round(1.0 / interval)), 30.f, 1000.f);
 }
 
 bool coreEnabled() {
@@ -80,6 +93,29 @@ class $modify(ZaidUltraGarageLayer, GJGarageLayer) {
 };
 
 class $modify(ZaidUltraPlayLayer, PlayLayer) {
+    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
+        if (!PlayLayer::init(level, useReplay, dontCreateObjects)) {
+            return false;
+        }
+
+        if (coreEnabled()) {
+            Telemetry::get().resetLevel();
+            RunPredictor::get().resetLevel();
+            RunPredictor::get().startAttempt();
+            SmartDetail::get().resetSession();
+            SmartDetailRenderer::get().reset();
+            AndroidGuardian::get().reset();
+        }
+        return true;
+    }
+
+    void setupHasCompleted() {
+        PlayLayer::setupHasCompleted();
+        if (coreEnabled()) {
+            SmartDetailRenderer::get().scan(this);
+        }
+    }
+
     void resetLevel() {
         PlayLayer::resetLevel();
         if (!coreEnabled()) return;
@@ -95,20 +131,30 @@ class $modify(ZaidUltraPlayLayer, PlayLayer) {
         if (!coreEnabled()) return;
 
         const float percent = this->getCurrentPercent();
-        if (Mod::get()->getSettingValue<bool>("frame-doctor")) {
+        const float fpsTarget = targetFps();
+
+        // Telemetry is shared. Smart Detail and Auto Benchmark need the same
+        // samples even if the user hides the Frame Doctor UI.
+        if (Mod::get()->getSettingValue<bool>("frame-doctor") ||
+            Mod::get()->getSettingValue<bool>("auto-benchmark") ||
+            Mod::get()->getSettingValue<bool>("smart-detail")) {
             Telemetry::get().sample(dt, percent);
         }
+
+        if (Mod::get()->getSettingValue<bool>("android-guardian")) {
+            AndroidGuardian::get().tick(dt);
+        }
+
         if (Mod::get()->getSettingValue<bool>("run-predictor")) {
             RunPredictor::get().observeProgress(percent);
         }
-        if (Mod::get()->getSettingValue<bool>("smart-detail")) {
-            SmartDetail::get().observe(percent, dt * 1000.f, targetFps());
 
-            // First safe adaptive renderer: shed non-essential built-in glitter
-            // before more aggressive object culling. Gameplay/collision objects
-            // are never removed or mutated.
-            const bool fullQuality = SmartDetail::get().activeTier() == DetailTier::Normal;
-            this->toggleGlitter(fullQuality);
+        if (Mod::get()->getSettingValue<bool>("smart-detail")) {
+            SmartDetail::get().observe(percent, dt * 1000.f, fpsTarget);
+            SmartDetailRenderer::get().apply(this, SmartDetail::get().activeTier());
+        } else {
+            // If Smart Detail is disabled mid-level, restore normal rendering.
+            SmartDetailRenderer::get().apply(this, DetailTier::Normal);
         }
     }
 
