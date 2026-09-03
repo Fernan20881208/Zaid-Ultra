@@ -100,7 +100,8 @@ class $modify(ZaidUltraPlayLayer, PlayLayer) {
 
         if (coreEnabled()) {
             Telemetry::get().resetLevel();
-            RunPredictor::get().resetLevel();
+            const float savedBest = level ? static_cast<float>(level->m_normalPercent.value()) : 0.f;
+            RunPredictor::get().resetLevel(savedBest);
             RunPredictor::get().startAttempt();
             SmartDetail::get().resetSession();
             SmartDetailRenderer::get().reset();
