@@ -7,7 +7,7 @@
   "name": "Zaid-Ultra",
   "version": "v0.1.0",
   "developer": "Zaid Navarro",
-  "description": "Android low-latency suite for Geometry Dash / Geode with optional root touch tuning and render-latency controls.",
+  "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
     "performance",
     "gameplay",
@@ -22,6 +22,13 @@
       "type": "bool",
       "name": "Boost táctil ROOT",
       "description": "Activa el modo de alta frecuencia del Goodix y speed_touch cuando el kernel los expone. En tu duchamp esto cambia 240 Hz a 480 Hz.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "native-subframe-input": {
+      "type": "bool",
+      "name": "Input sub-frame nativo",
+      "description": "Activa Click Between Steps de Geometry Dash 2.2 para aprovechar mejor timestamps de entrada entre frames. Si CBF o CBF Lite están cargados, Zaid-Ultra no interfiere con ellos.",
       "default": true,
       "platforms": ["android"]
     },
