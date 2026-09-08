@@ -1,0 +1,60 @@
+{
+  "geode": "5.10.1",
+  "gd": {
+    "android": "2.2081"
+  },
+  "id": "zaid.ultra",
+  "name": "Zaid-Ultra",
+  "version": "v0.1.0",
+  "developer": "Zaid Navarro",
+  "description": "Android low-latency suite for Geometry Dash / Geode with optional root touch tuning and render-latency controls.",
+  "tags": [
+    "performance",
+    "gameplay",
+    "enhancement"
+  ],
+  "settings": {
+    "latency-title": {
+      "type": "title",
+      "name": "Latencia Android"
+    },
+    "root-touch-boost": {
+      "type": "bool",
+      "name": "Boost táctil ROOT",
+      "description": "Activa el modo de alta frecuencia del Goodix y speed_touch cuando el kernel los expone. En tu duchamp esto cambia 240 Hz a 480 Hz.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "game-thread-priority": {
+      "type": "bool",
+      "name": "Prioridad del hilo de juego",
+      "description": "Intenta aumentar la prioridad del hilo principal de gameplay. Si Android no lo permite directamente, usa ROOT como respaldo.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "minimum-timer-slack": {
+      "type": "bool",
+      "name": "Timer slack mínimo",
+      "description": "Reduce el margen de temporizadores del hilo de juego para disminuir retrasos de scheduling. Puede aumentar ligeramente el consumo.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "experimental-no-vsync": {
+      "type": "bool",
+      "name": "No-VSync experimental",
+      "description": "Solicita swap interval 0 a EGL. Puede reducir latencia de render, pero también causar tearing o peor frame pacing. Déjalo apagado si notas inestabilidad.",
+      "default": false,
+      "platforms": ["android"]
+    },
+    "diagnostic-logs": {
+      "type": "bool",
+      "name": "Logs de diagnóstico",
+      "description": "Registra el report rate táctil, speed_touch y resultados de los ajustes de latencia en el log de Geode.",
+      "default": true,
+      "platforms": ["android"]
+    }
+  },
+  "links": {
+    "source": "https://github.com/Fernan20881208/Zaid-Ultra"
+  }
+}
