@@ -17,6 +17,7 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 setup_geode_mod(${PROJECT_NAME})
 
 if (ANDROID)
-    # Used only by the optional experimental no-vsync path.
-    target_link_libraries(${PROJECT_NAME} PRIVATE EGL)
+    # Geode uses the plain target_link_libraries signature internally.
+    # Keep this call plain as well so CMake accepts the target.
+    target_link_libraries(${PROJECT_NAME} EGL)
 endif()
