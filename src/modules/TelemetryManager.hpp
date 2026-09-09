@@ -20,6 +20,9 @@ struct TelemetrySnapshot final {
     double touchJitterMs = 0.0;
     double inputDispatchAgeMs = 0.0;
     double inputToPhysicsMs = 0.0;
+    double cbfStepPhaseMs = 0.0;
+    double cbfOffsetToNextStepMs = 0.0;
+    double cbfOffsetJitterMs = 0.0;
     double cpuTemperatureC = 0.0;
     double gpuTemperatureC = 0.0;
     double batteryTemperatureC = 0.0;
@@ -84,8 +87,11 @@ private:
     std::int64_t m_lastDisplaySampleNs = 0;
     double m_touchMeanMs = 0.0;
     double m_touchVarianceMs2 = 0.0;
+    double m_cbfOffsetMeanMs = 0.0;
+    double m_cbfOffsetVarianceMs2 = 0.0;
     std::int64_t m_lastTouchMoveNs = 0;
     std::atomic<std::int64_t> m_pendingInputNs{0};
+    std::atomic<std::int64_t> m_pendingPhaseInputNs{0};
 
     std::vector<ThermalSource> m_thermalSources;
     std::vector<std::string> m_cpuPolicyPaths;

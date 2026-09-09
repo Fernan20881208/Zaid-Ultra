@@ -125,6 +125,8 @@ void RootConsolePopup::refreshText() {
     auto memory = MemoryTrim::get().status();
     auto audio = AudioLatency::get().status();
     auto replay = ReplayProbe::get().status();
+    auto cbfLoaded = Loader::get()->getLoadedMod("syzzi.click_between_frames") != nullptr ||
+        Loader::get()->getLoadedMod("zmx.cbf-lite") != nullptr;
 
 #ifdef GEODE_IS_ANDROID
     auto uid = static_cast<int>(::getuid());
@@ -144,7 +146,8 @@ void RootConsolePopup::refreshText() {
         "CPU {:.0f}/{:.0f} MHz {:.1f}C | GPU {:.0f}/{:.0f} MHz {:.1f}C\n"
         "Batería {:.1f}C | throttle={} ({})\n"
         "FPS {:.0f} | frame {:.2f}/P95 {:.2f} ms | touch app {:.0f} Hz\n"
-        "Input dispatch {:.2f} ms | hasta física {:.2f} ms | jitter {:.2f} ms\n"
+        "Input dispatch {:.2f} ms | hasta física {:.2f} ms | touch jitter {:.2f} ms\n"
+        "CBF={} | fase {:.2f} ms | próximo step {:.2f} ms | jitter {:.2f} ms\n"
         "Hilo: {}\n"
         "Trim: {}\n"
         "Audio: {} {} Hz DSP {}x{} (~{:.2f} ms), Android {}/{}\n"
@@ -180,6 +183,10 @@ void RootConsolePopup::refreshText() {
         telemetry.inputDispatchAgeMs,
         telemetry.inputToPhysicsMs,
         telemetry.touchJitterMs,
+        cbfLoaded ? "externo" : "CBS nativo/ninguno",
+        telemetry.cbfStepPhaseMs,
+        telemetry.cbfOffsetToNextStepMs,
+        telemetry.cbfOffsetJitterMs,
         thread.lastAction,
         memory.note,
         audio.output,

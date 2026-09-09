@@ -51,7 +51,12 @@ It never kills apps, calls `drop_caches`, or invokes Android task killers.
 Only the global heads-up switch is currently implemented. DND/Modes are not
 used because Android version and OEM policy can transform their state, making
 exact restoration unreliable. `SYSTEM_ALERT_WINDOW` / app-op changes are also
-excluded until a scoped, reversible method is validated.
+excluded until a scoped, reversible method is validated. Android 12's public
+`Window.setHideOverlayWindows` is not called: it requires the privileged
+`HIDE_OVERLAY_WINDOWS` permission, and `Window` exposes no matching public
+getter with which a mod could snapshot the prior state exactly.
+
+- [AOSP Window.setHideOverlayWindows implementation](https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/view/Window.java)
 
 ## Audio
 
@@ -76,6 +81,9 @@ Geode 5.10.1 forwards Android MotionEvent nanosecond timestamps through
 Click Between Frames consumes that timestamp to split a physics step. The
 Zaid-Ultra listener always returns `Propagate`; its physics hook only marks an
 observed boundary and never changes delta time, queued buttons or player state.
+The displayed CBF phase mirrors its timestamp calculation against observed
+frame spans split into approximately 240 Hz steps. It is labelled an estimate
+because independent hook ordering can add a small constant offset.
 
 `touch app Hz` is the delivered MotionEvent rate, which may be lower than the
 Goodix SYN_REPORT rate because Android may batch/coalesce motion. It is not

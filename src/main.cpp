@@ -159,7 +159,7 @@ class $modify(ZaidUltraPauseLayer, PauseLayer) {
             this,
             this,
             menu_selector(ZaidUltraPauseLayer::onZaidUltraConsole),
-            {size.width - 30.0f, size.height - 28.0f}
+            {30.0f, size.height - 28.0f}
         );
     }
 
@@ -176,7 +176,7 @@ class $modify(ZaidUltraEndLevelLayer, EndLevelLayer) {
             this,
             this,
             menu_selector(ZaidUltraEndLevelLayer::onZaidUltraConsole),
-            {size.width - 30.0f, size.height - 28.0f}
+            {30.0f, size.height - 28.0f}
         );
     }
 

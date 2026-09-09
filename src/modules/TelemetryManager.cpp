@@ -110,8 +110,11 @@ void TelemetryManager::start(bool sampleThermals) {
         m_lastDisplaySampleNs = 0;
         m_touchMeanMs = 0.0;
         m_touchVarianceMs2 = 0.0;
+        m_cbfOffsetMeanMs = 0.0;
+        m_cbfOffsetVarianceMs2 = 0.0;
         m_lastTouchMoveNs = 0;
         m_pendingInputNs.store(0);
+        m_pendingPhaseInputNs.store(0);
     }
     m_sensorThread = std::thread([this] { sensorLoop(); });
 }
@@ -139,6 +142,7 @@ void TelemetryManager::requestSample() {
 void TelemetryManager::onFrame() {
     auto now = monotonicNs();
     bool sampleDisplay = false;
+    auto phaseInput = m_pendingPhaseInputNs.exchange(0, std::memory_order_acq_rel);
     {
         std::lock_guard lock(m_mutex);
         if (!m_active) {
@@ -150,6 +154,31 @@ void TelemetryManager::onFrame() {
                 m_frameIntervalsMs[m_frameIndex] = interval;
                 m_frameIndex = (m_frameIndex + 1) % m_frameIntervalsMs.size();
                 m_frameCount = std::min(m_frameCount + 1, m_frameIntervalsMs.size());
+            }
+
+            // Mirror the timestamp math CBF uses without touching its queue:
+            // divide the observed frame span into ~240 Hz physics intervals
+            // and locate the input inside its interval. Hook ordering can add
+            // a small constant offset, so this is explicitly an estimate.
+            if (phaseInput > m_lastFrameNs && phaseInput <= now) {
+                auto frameSpanNs = static_cast<double>(now - m_lastFrameNs);
+                auto steps = std::max(1LL, std::llround(frameSpanNs / 4'166'666.667));
+                auto stepNs = frameSpanNs / static_cast<double>(steps);
+                auto elapsedNs = static_cast<double>(phaseInput - m_lastFrameNs);
+                auto phaseNs = std::fmod(elapsedNs, stepNs);
+                auto offsetMs = (stepNs - phaseNs) / 1'000'000.0;
+                m_snapshot.cbfStepPhaseMs = phaseNs / 1'000'000.0;
+                m_snapshot.cbfOffsetToNextStepMs = offsetMs;
+                constexpr double alpha = 0.15;
+                if (m_cbfOffsetMeanMs == 0.0) {
+                    m_cbfOffsetMeanMs = offsetMs;
+                } else {
+                    auto difference = offsetMs - m_cbfOffsetMeanMs;
+                    m_cbfOffsetMeanMs += alpha * difference;
+                    m_cbfOffsetVarianceMs2 = (1.0 - alpha) *
+                        (m_cbfOffsetVarianceMs2 + alpha * difference * difference);
+                }
+                m_snapshot.cbfOffsetJitterMs = std::sqrt(std::max(0.0, m_cbfOffsetVarianceMs2));
             }
         }
         m_lastFrameNs = now;
@@ -225,6 +254,7 @@ void TelemetryManager::onTouch(std::int64_t eventTimestampNs, int eventType) {
     // Began (0) and Ended (2) are the action timestamps CBF/CBS consume.
     if (eventType == 0 || eventType == 2) {
         m_pendingInputNs.store(eventTimestampNs, std::memory_order_release);
+        m_pendingPhaseInputNs.store(eventTimestampNs, std::memory_order_release);
     }
 }
 
@@ -264,6 +294,7 @@ std::string TelemetryManager::compactText() const {
         "FPS {:.0f} | {:.2f} ms (P95 {:.2f})\n"
         "Pantalla {:.0f} Hz | Touch app {:.0f} Hz, jitter {:.2f} ms\n"
         "Input {:.2f} ms -> fisica {:.2f} ms\n"
+        "CBF fase {:.2f} ms | prox. step {:.2f} ms (jitter {:.2f})\n"
         "CPU {:.0f}/{:.0f} MHz {:.1f}C | GPU {:.0f}/{:.0f} MHz {:.1f}C\n"
         "Bateria {:.1f}C | Throttle {}",
         value.fps,
@@ -274,6 +305,9 @@ std::string TelemetryManager::compactText() const {
         value.touchJitterMs,
         value.inputDispatchAgeMs,
         value.inputToPhysicsMs,
+        value.cbfStepPhaseMs,
+        value.cbfOffsetToNextStepMs,
+        value.cbfOffsetJitterMs,
         value.cpuCurrentMHz,
         value.cpuMaximumMHz,
         value.cpuTemperatureC,
@@ -460,6 +494,9 @@ void TelemetryManager::sampleSensors() {
         update.touchJitterMs = m_snapshot.touchJitterMs;
         update.inputDispatchAgeMs = m_snapshot.inputDispatchAgeMs;
         update.inputToPhysicsMs = m_snapshot.inputToPhysicsMs;
+        update.cbfStepPhaseMs = m_snapshot.cbfStepPhaseMs;
+        update.cbfOffsetToNextStepMs = m_snapshot.cbfOffsetToNextStepMs;
+        update.cbfOffsetJitterMs = m_snapshot.cbfOffsetJitterMs;
         m_snapshot = std::move(update);
     }
 #endif
