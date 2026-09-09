@@ -21,17 +21,23 @@ SessionManager& SessionManager::get() {
 }
 
 void SessionManager::prime() {
-    LatencyManager::get().prime();
-    RootExecutor::get().start();
-    // Recovery is deliberately queued first: no new persistent value may be
-    // changed until an earlier interrupted session has been restored.
-    RootStateGuard::get().recoverIfNeeded();
-    RootExecutor::get().probe();
-    RootStateGuard::get().refreshReadOnlyStatus();
-    AndroidBridge::get().queryAudioProperties();
+    std::call_once(m_primeOnce, [] {
+        // None of this runs while Geode is still loading mods. It is delayed
+        // until the first PlayLayer preparation, when the Android activity,
+        // save directory and runtime threads are all established.
+        LatencyManager::get().prime();
+        RootExecutor::get().start();
+        // Recovery is deliberately queued first: no new persistent value may
+        // be changed until an interrupted session has been restored.
+        RootStateGuard::get().recoverIfNeeded();
+        RootExecutor::get().probe();
+        RootStateGuard::get().refreshReadOnlyStatus();
+        AudioLatency::get().refreshDiagnostics();
+    });
 }
 
 GameplayProfile SessionManager::prepare(GJGameLevel* level) {
+    prime();
     end();
     auto profile = ProfileManager::get().resolve(level);
     MemoryTrim::get().beforeGameplay(profile.memoryTrim);

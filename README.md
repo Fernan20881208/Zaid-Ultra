@@ -22,14 +22,14 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
   Goodix report mode and `speed_touch_enable`, including next-launch recovery.
 - Own-process `malloc_trim` with RSS/timing measurement and automatic disabling
   when it provides no measurable benefit.
-- FMOD/Android audio-route diagnostics and opt-in pre-init DSP buffer modes.
+- Android audio-route diagnostics. Direct FMOD tuning is temporarily disabled
+  in beta.3 while its Android load-time ABI path is validated.
 - Raw Android MotionEvent timestamp metrics that always propagate to CBF:
   delivery rate, jitter, dispatch age and time to an observed physics boundary.
 - Automatic Extreme Demon profile plus manual `ID:ultra` / `ID:monitor` rules.
 - Read-only CPU/GPU/battery thermal and frequency monitoring, thermal-pressure
   detection, FPS, frametime, display refresh and optional in-level overlay.
-- Safe Geode console on pause/end screens with fixed diagnostic actions only,
-  plus an alternate opener in the mod settings for replaced pause menus.
+- Safe Geode console on pause/end screens with fixed diagnostic actions only.
 - Read-only `screenrecord --help` capability probe for the 60-second replay
   backend. Recording remains disabled until the actual HyperOS flags and audio
   capabilities are validated on-device.

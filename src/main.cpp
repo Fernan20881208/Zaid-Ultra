@@ -4,13 +4,10 @@
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/modify/System.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/loader/SettingV3.hpp>
 
 #include "core/SessionManager.hpp"
 #include "core/Settings.hpp"
-#include "modules/AudioLatency.hpp"
 #include "modules/ReplayProbe.hpp"
 #include "modules/TelemetryManager.hpp"
 #include "ui/RootConsolePopup.hpp"
@@ -27,6 +24,7 @@ namespace {
 
 #ifdef GEODE_IS_ANDROID
 ListenerHandle g_androidInputListener;
+bool g_androidInputListenerInstalled = false;
 #endif
 
 void showRootConsole() {
@@ -85,23 +83,15 @@ bool externalCbfLoaded() {
         Loader::get()->getLoadedMod("zmx.cbf-lite") != nullptr;
 }
 
-} // namespace
-
-$on_mod(Loaded) {
-    zaid::ultra::SessionManager::get().prime();
-
-    // Permanent fallback: the console can also be opened from Zaid-Ultra's
-    // settings even if another mod completely replaces the pause UI.
-    ButtonSettingPressedEventV3(Mod::get(), "console-actions").listen([](auto buttonKey) {
-        if (buttonKey == "open-console") {
-            showRootConsole();
-        }
-    }).leak();
-
 #ifdef GEODE_IS_ANDROID
-    // Observe MotionEvent timestamps at Geode's raw Android boundary. Returning
-    // Propagate is essential: CBF and the game's normal input path still own
-    // delivery and physics behavior.
+void ensureAndroidInputListener() {
+    if (g_androidInputListenerInstalled) {
+        return;
+    }
+
+    // Register only after Geometry Dash has created a PlayLayer. Keeping this
+    // out of the mod-loading phase avoids touching Android event plumbing
+    // while Geode is still loading and enabling other mods.
     g_androidInputListener = AndroidRichInputEvent().listen(
         [](std::int64_t timestamp, int, int, AndroidRichInput input) {
             if (auto* touch = std::get_if<AndroidTouchInput>(&input)) {
@@ -114,17 +104,11 @@ $on_mod(Loaded) {
         },
         Priority::VeryEarly
     );
-#endif
+    g_androidInputListenerInstalled = true;
 }
+#endif
 
-class $modify(ZaidUltraFMODSystem, FMOD::System) {
-    FMOD_RESULT init(int maxChannels, FMOD_INITFLAGS flags, void* extraData) {
-        zaid::ultra::AudioLatency::get().beforeSystemInit(this);
-        auto result = FMOD::System::init(maxChannels, flags, extraData);
-        zaid::ultra::AudioLatency::get().afterSystemInit(this, result);
-        return result;
-    }
-};
+} // namespace
 
 class $modify(ZaidUltraScheduler, CCScheduler) {
     void update(float dt) {
@@ -152,6 +136,7 @@ class $modify(ZaidUltraPlayLayer, PlayLayer) {
         }
 
 #ifdef GEODE_IS_ANDROID
+        ensureAndroidInputListener();
         if (zaid::ultra::settings::enabled("native-subframe-input")) {
             if (!externalCbfLoaded()) {
                 this->m_clickBetweenSteps = true;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Geode/fmod/fmod.hpp>
-
 #include <mutex>
 #include <string>
 
@@ -23,7 +21,7 @@ struct AudioStatus final {
     std::string driver = "<no disponible>";
     std::string lowLatencyFeature = "desconocido";
     std::string mode = "Original";
-    std::string underrunDiagnostic = "FMOD Core no expone contador de underruns del mixer";
+    std::string underrunDiagnostic = "FMOD directo desactivado en el arranque seguro";
     std::string lastError;
 };
 
@@ -31,21 +29,16 @@ class AudioLatency final {
 public:
     static AudioLatency& get();
 
-    // Called by the FMOD::System::init hook. setDSPBufferSize is only valid
-    // before init, so this is the sole mutation point for audio buffering.
-    void beforeSystemInit(FMOD::System* system);
-    void afterSystemInit(FMOD::System* system, FMOD_RESULT result);
+    // Android properties remain available without linking to or hooking FMOD.
+    // Direct FMOD diagnostics/tuning stay disabled until the device crash path
+    // is isolated and a late, ABI-safe integration is validated.
     void refreshDiagnostics();
     AudioStatus status() const;
 
 private:
     AudioLatency() = default;
-    static unsigned int safeAutoBlockSize(int framesPerBuffer);
-    static std::string outputName(FMOD_OUTPUTTYPE output);
-    void readSystemDiagnostics(FMOD::System* system);
 
     mutable std::mutex m_mutex;
-    FMOD::System* m_system = nullptr;
     AudioStatus m_status;
 };
 

@@ -26,6 +26,7 @@ private:
     SessionManager() = default;
 
     mutable std::mutex m_mutex;
+    std::once_flag m_primeOnce;
     bool m_active = false;
     GameplayProfile m_profile;
 };

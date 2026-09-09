@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.2",
+  "version": "v0.2.0-beta.3",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -100,7 +100,7 @@
     "audio-buffer-mode": {
       "type": "string",
       "name": "Buffer FMOD",
-      "description": "Original solo diagnostica. Auto seguro solicita antes de iniciar FMOD un bloque compatible con el frames-per-buffer nativo de Android y conserva 4 buffers.",
+      "description": "La beta de arranque seguro solo lee sample-rate y frames-per-buffer de Android. Los cambios directos de FMOD están temporalmente omitidos mientras se valida una integración ABI segura.",
       "one-of": ["Original", "Auto seguro", "256 x 4 experimental"],
       "default": "Original",
       "requires-restart": true,
@@ -158,15 +158,6 @@
       "name": "Botón ZU en pausa/final",
       "description": "Añade acceso a la consola de diagnóstico y a las acciones seguras predefinidas.",
       "default": true,
-      "platforms": ["android"]
-    },
-    "console-actions": {
-      "type": "button",
-      "name": "Acceso alternativo a ZU",
-      "description": "Abre la consola segura desde los ajustes del mod, incluso si otro mod reemplaza el menú de pausa.",
-      "buttons": {
-        "open-console": "Abrir consola ZU"
-      },
       "platforms": ["android"]
     },
     "experimental-no-vsync": {

@@ -1,3 +1,14 @@
+# v0.2.0-beta.3
+
+- Hardened Android startup after an on-device crash while Geode was loading
+  the Zaid-Ultra binary.
+- Deferred ROOT worker startup, crash recovery, JNI audio probing and raw-input
+  listener registration until the first PlayLayer.
+- Removed the direct `FMOD::System::init` hook and all direct FMOD C++ symbol
+  references from this safe build; Android audio properties remain read-only.
+- Temporarily removed the settings-page console action to keep the mod-loading
+  path free of runtime event listeners. The pause/end-level ZU button remains.
+
 # v0.2.0-beta.2
 
 - Fixed the ZU console button on Android by attaching it to the aspect-ratio-safe
