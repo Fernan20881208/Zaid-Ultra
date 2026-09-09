@@ -1,3 +1,10 @@
+# v0.2.0-beta.6
+
+- Fixed Save Clip rejecting a valid encoded replay after PlayLayer exited.
+  The frozen SPS/PPS and frame ring can now be saved from the end-level menu.
+- Changed the normal post-gameplay replay state from `buffer stopped` to
+  `buffer ready` so it is not confused with a capture failure.
+
 # v0.2.0-beta.5
 
 - Added the first live 60-second ROOT Instant Replay backend for the validated

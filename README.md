@@ -33,6 +33,8 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
 - Opt-in ROOT Instant Replay beta using the device-validated raw-H.264
   `screenrecord` stream: a bounded encoded ring keeps recent gameplay and the
   pause/end Clip button saves existing frames without restarting capture.
+  The frozen ring remains saveable after PlayLayer exits into the end-level
+  menu.
   Android MediaMuxer produces MP4 when accepted, with a raw-H.264 diagnostic
   fallback. Internal audio remains disabled until the verified `REMOTE_SUBMIX`
   route has exact packet timestamps.

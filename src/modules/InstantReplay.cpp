@@ -399,7 +399,11 @@ bool InstantReplay::saveLast60Seconds() {
             notifyOnMainThread("Ya se está guardando un clip", NotificationIcon::Info);
             return false;
         }
-        if (!m_status.buffering || m_frames.empty() || m_sps.empty() || m_pps.empty()) {
+        // A stopped capture is still a valid replay snapshot. PlayLayer::onExit
+        // intentionally stops screenrecord before the end-level menu can be
+        // used, so requiring `buffering` here discarded an otherwise complete
+        // SPS/PPS + frame ring exactly when the Clip button was pressed.
+        if (m_frames.empty() || m_sps.empty() || m_pps.empty()) {
             m_status.lastError = "el búfer todavía no tiene vídeo decodificable";
             notifyOnMainThread(m_status.lastError, NotificationIcon::Error);
             return false;
@@ -629,7 +633,7 @@ void InstantReplay::captureLoop(std::uint64_t generation) {
                 m_status.summary = "capturador detenido por error";
             } else if (m_status.lastError.empty()) {
                 m_status.summary = fmt::format(
-                    "búfer detenido; {:.1f} s conservados",
+                    "búfer listo; {:.1f} s conservados",
                     m_status.bufferedSeconds
                 );
             }
