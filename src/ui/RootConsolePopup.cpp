@@ -226,8 +226,17 @@ void RootConsolePopup::onRestore(CCObject*) {
 }
 
 void RootConsolePopup::onReplayProbe(CCObject*) {
+    auto existing = ReplayProbe::get().details();
+    if (!existing.empty()) {
+        auto copied = PlatformToolbox::copyToClipboard(gd::string(existing.c_str()));
+        Notification::create(
+            copied ? "Ayuda OEM copiada; pégala en el chat" : "No se pudo copiar la ayuda OEM",
+            copied ? NotificationIcon::Success : NotificationIcon::Error
+        )->show();
+        return;
+    }
     ReplayProbe::get().run();
-    Notification::create("Sonda read-only de screenrecord iniciada", NotificationIcon::Info)->show();
+    Notification::create("Sonda iniciada; vuelve a pulsar para copiar", NotificationIcon::Info)->show();
 }
 
 } // namespace zaid::ultra

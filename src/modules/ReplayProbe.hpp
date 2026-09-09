@@ -23,12 +23,14 @@ public:
 
     void run();
     ReplayProbeStatus status() const;
+    std::string details() const;
 
 private:
     ReplayProbe() = default;
 
     mutable std::mutex m_mutex;
     ReplayProbeStatus m_status;
+    std::string m_details;
 };
 
 } // namespace zaid::ultra

@@ -64,6 +64,7 @@ void ReplayProbe::run() {
         {
             std::lock_guard lock(m_mutex);
             m_status = status;
+            m_details = result.output;
         }
         if (settings::diagnostics()) {
             log::info("Instant Replay capability: {}", status.summary);
@@ -78,6 +79,11 @@ void ReplayProbe::run() {
 ReplayProbeStatus ReplayProbe::status() const {
     std::lock_guard lock(m_mutex);
     return m_status;
+}
+
+std::string ReplayProbe::details() const {
+    std::lock_guard lock(m_mutex);
+    return m_details;
 }
 
 } // namespace zaid::ultra
