@@ -37,7 +37,7 @@ GameplayProfile ProfileManager::resolve(GJGameLevel* level) {
     GameplayProfile profile;
     if (level) {
         profile.levelId = level->m_levelID.value();
-        profile.extremeDemon = level->m_demon.value() != 0 &&
+        profile.extremeDemon =
             level->m_demonDifficulty == static_cast<int>(DemonDifficultyType::ExtremeDemon);
     }
 

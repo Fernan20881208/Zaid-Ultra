@@ -62,14 +62,17 @@ void LatencyManager::begin() {
     }
 
     if (settings::enabled("game-thread-priority") && status.niceCaptured) {
-        status.priorityApplied = ::setpriority(
-            PRIO_PROCESS,
-            static_cast<id_t>(status.threadId),
-            -8
-        ) == 0;
-        if (!status.priorityApplied) {
-            status.priorityRootFallback = true;
-            queuePriorityChange(status.threadId, -8, false);
+        // Never lower a priority that another mod or the launcher already set
+        // above our target.
+        if (status.originalNice > -8) {
+            status.priorityApplied = ::setpriority(
+                PRIO_PROCESS,
+                static_cast<id_t>(status.threadId),
+                -8
+            ) == 0;
+            if (!status.priorityApplied) {
+                status.priorityRootFallback = true;
+            }
         }
     }
 
@@ -89,6 +92,11 @@ void LatencyManager::begin() {
     {
         std::lock_guard lock(m_mutex);
         m_status = status;
+    }
+    // Publish the captured state before the asynchronous completion can update
+    // it. This also lets end() enqueue restoration behind this exact job.
+    if (status.priorityRootFallback) {
+        queuePriorityChange(status.threadId, -8, false);
     }
     if (settings::diagnostics()) {
         log::info("{}", status.lastAction);
@@ -120,7 +128,13 @@ void LatencyManager::end() {
     }
 
     bool niceRestored = true;
-    if ((status.priorityApplied || status.priorityRootFallback) && status.niceCaptured) {
+    if (status.priorityRootFallback && status.niceCaptured) {
+        // The apply job may still be pending. Always enqueue a matching restore
+        // on the same FIFO worker; a direct restore here could otherwise run
+        // first and then be overwritten by the late apply job.
+        queuePriorityChange(status.threadId, status.originalNice, true);
+        niceRestored = false;
+    } else if (status.priorityApplied && status.niceCaptured) {
         niceRestored = ::setpriority(
             PRIO_PROCESS,
             static_cast<id_t>(status.threadId),

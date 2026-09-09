@@ -215,7 +215,7 @@ void RootConsolePopup::onTrim(CCObject*) {
 
 void RootConsolePopup::onRestore(CCObject*) {
     SessionManager::get().end();
-    Notification::create("Restauración segura solicitada", NotificationIcon::Success)->show();
+    Notification::create("Restaurado; reentra al nivel para reactivar", NotificationIcon::Success)->show();
 }
 
 void RootConsolePopup::onReplayProbe(CCObject*) {

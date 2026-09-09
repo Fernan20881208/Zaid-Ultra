@@ -39,16 +39,22 @@ RootStateGuard& RootStateGuard::get() {
 }
 
 void RootStateGuard::recoverIfNeeded() {
+    auto recoveryExists = std::filesystem::exists(recoveryPath());
     {
         std::lock_guard lock(m_mutex);
-        m_status.recoveryPending = std::filesystem::exists(recoveryPath());
+        m_status.recoveryPending = recoveryExists;
     }
 
     RootExecutor::get().post([this] {
         auto saved = loadRecoveryFile();
         if (!saved) {
             std::lock_guard lock(m_mutex);
-            m_status.recoveryPending = false;
+            // An invalid snapshot must never be silently overwritten: its old
+            // state is unknown, so the only safe behavior is to block writes.
+            m_status.recoveryPending = std::filesystem::exists(recoveryPath());
+            m_status.lastAction = m_status.recoveryPending
+                ? "snapshot de recuperación inválido; cambios ROOT bloqueados"
+                : "sin recuperación pendiente";
             return;
         }
 
@@ -75,7 +81,7 @@ void RootStateGuard::recoverIfNeeded() {
 
 void RootStateGuard::begin(RootGuardConfig config) {
     RootExecutor::get().post([this, config] {
-        if (loadRecoveryFile()) {
+        if (std::filesystem::exists(recoveryPath())) {
             std::lock_guard lock(m_mutex);
             m_status.lastAction = "perfil omitido: recuperación pendiente";
             m_status.recoveryPending = true;
