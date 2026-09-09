@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -31,6 +32,7 @@ constexpr std::size_t kMaximumRingBytes = 4 * 1024 * 1024;
 constexpr std::size_t kMaximumPacketBytes = 1024 * 1024;
 constexpr std::uint32_t kPacketMagic = 0x5a554131; // ZUA1
 constexpr std::uint32_t kCodecConfigFlag = 2;
+constexpr std::uint32_t kTelemetryFlag = 0x40000000;
 constexpr char kHelperClass[] = "com.zaid.ultra.replay.ReplayAudioCapture";
 constexpr char kHelperJar[] = "/data/local/tmp/zaid-ultra-replay-audio.jar";
 constexpr char kPidFile[] = "/data/local/tmp/zaid-ultra-replay-audio.pid";
@@ -154,7 +156,16 @@ void ReplayAudio::beginGameplay() {
         m_status.bufferedSeconds = 0.0;
         m_status.bufferedMiB = 0.0;
         m_status.packetCount = 0;
-        m_status.summary = "iniciando loopback AAC ROOT...";
+        m_status.signalMeasured = false;
+        m_status.signalPresent = false;
+        m_status.signalDbfs = -120.0;
+        m_status.signalPeak = 0.0;
+#ifdef GEODE_IS_ANDROID
+        m_status.targetUid = static_cast<int>(::getuid());
+#else
+        m_status.targetUid = -1;
+#endif
+        m_status.summary = "iniciando captura GAME/MEDIA por UID...";
         m_status.lastError.clear();
     }
     m_stopRequested.store(false, std::memory_order_release);
@@ -219,12 +230,13 @@ void ReplayAudio::captureLoop(std::uint64_t generation, std::string helperSource
         "chown 0:0 \"$HELPER\"; chmod 0444 \"$HELPER\"; "
         ": >\"$ERRFILE\"; chmod 0644 \"$ERRFILE\"; "
         "echo $$ >\"$PIDFILE\"; chmod 0644 \"$PIDFILE\"; "
-        "exec env CLASSPATH=\"$HELPER\" app_process /system/bin {} 2>\"$ERRFILE\"",
+        "exec env CLASSPATH=\"$HELPER\" app_process /system/bin {} --target-uid {} 2>\"$ERRFILE\"",
         kPidFile,
         kErrorFile,
         kHelperJar,
         shellQuote(helperSource),
-        kHelperClass
+        kHelperClass,
+        static_cast<int>(::getuid())
     );
     auto command = "su -c " + shellQuote(launchScript);
     auto* pipe = ::popen(command.c_str(), "r");
@@ -254,12 +266,16 @@ void ReplayAudio::captureLoop(std::uint64_t generation, std::string helperSource
         if (!readExact(fd, payload.data(), payload.size(), readError)) {
             break;
         }
-        acceptPacket(
-            std::move(payload),
-            static_cast<std::int64_t>(pts),
-            flags,
-            generation
-        );
+        if ((flags & kTelemetryFlag) != 0) {
+            acceptTelemetry(payload, generation);
+        } else {
+            acceptPacket(
+                std::move(payload),
+                static_cast<std::int64_t>(pts),
+                flags,
+                generation
+            );
+        }
     }
 
     requestHelperStop();
@@ -282,9 +298,15 @@ void ReplayAudio::captureLoop(std::uint64_t generation, std::string helperSource
                     : fmt::format("helper de audio terminó (exit={}, {})", exitCode, readError);
                 m_status.summary = "audio no disponible; replay continúa con vídeo";
             } else if (m_status.available) {
+                auto signal = m_status.signalMeasured
+                    ? (m_status.signalPresent
+                        ? fmt::format("señal máx {:.1f} dBFS", m_status.signalDbfs)
+                        : std::string("SILENCIO PCM"))
+                    : std::string("señal no medida");
                 m_status.summary = fmt::format(
-                    "audio listo; {:.1f} s AAC conservados",
-                    m_status.bufferedSeconds
+                    "audio listo; {:.1f} s AAC | {}",
+                    m_status.bufferedSeconds,
+                    signal
                 );
             } else if (m_status.lastError.empty()) {
                 m_status.summary = "audio detenido sin paquetes AAC";
@@ -336,12 +358,60 @@ void ReplayAudio::acceptPacket(
             static_cast<double>(m_frames.back().ptsUs - m_frames.front().ptsUs) / 1'000'000.0
         );
         m_status.bufferedMiB = static_cast<double>(m_ringBytes) / (1024.0 * 1024.0);
+        auto signal = m_status.signalMeasured
+            ? (m_status.signalPresent
+                ? fmt::format("señal máx {:.1f} dBFS", m_status.signalDbfs)
+                : std::string("SILENCIO PCM"))
+            : std::string("midiendo señal...");
         m_status.summary = fmt::format(
-            "AAC 48 kHz estéreo | {:.1f} s | {:.1f} MiB",
+            "AAC GAME/MEDIA UID {} | {} | {:.1f} s | {:.1f} MiB",
+            m_status.targetUid,
+            signal,
             m_status.bufferedSeconds,
             m_status.bufferedMiB
         );
         m_status.lastError.clear();
+    }
+}
+
+void ReplayAudio::acceptTelemetry(
+    std::vector<std::uint8_t> const& payload,
+    std::uint64_t generation
+) {
+    if (payload.size() != 16) {
+        return;
+    }
+    auto peak = readU32Be(payload.data());
+    auto rmsMilli = readU32Be(payload.data() + 4);
+    auto nonZero = readU32Be(payload.data() + 8);
+    auto targetUid = static_cast<std::int32_t>(readU32Be(payload.data() + 12));
+    auto normalizedPeak = std::min(1.0, static_cast<double>(peak) / 32768.0);
+    auto normalizedRms = std::min(1.0, static_cast<double>(rmsMilli) / 32'768'000.0);
+    auto dbfs = normalizedRms > 0.0 ? 20.0 * std::log10(normalizedRms) : -120.0;
+
+    std::lock_guard lock(m_mutex);
+    if (generation != m_generation) {
+        return;
+    }
+    auto signalNow = normalizedPeak >= 0.001 || nonZero >= 128;
+    m_status.signalMeasured = true;
+    // Ignore sub-LSB noise floors. A real game mix comfortably exceeds both
+    // this peak threshold and the non-zero sample count over a one-second window.
+    m_status.signalPresent = m_status.signalPresent || signalNow;
+    m_status.signalDbfs = std::max(m_status.signalDbfs, std::max(-120.0, dbfs));
+    m_status.signalPeak = std::max(m_status.signalPeak, normalizedPeak);
+    m_status.targetUid = targetUid;
+    if (m_status.available) {
+        auto signal = m_status.signalPresent
+            ? fmt::format("señal máx {:.1f} dBFS", m_status.signalDbfs)
+            : std::string("SILENCIO PCM");
+        m_status.summary = fmt::format(
+            "AAC GAME/MEDIA UID {} | {} | {:.1f} s | {:.1f} MiB",
+            m_status.targetUid,
+            signal,
+            m_status.bufferedSeconds,
+            m_status.bufferedMiB
+        );
     }
 }
 

@@ -1,3 +1,9 @@
+# v0.2.0-beta.8
+
+- Corrige el replay AAC silencioso: el backend ahora incluye `USAGE_GAME` y `USAGE_UNKNOWN`, además de `USAGE_MEDIA`, y restringe la mezcla al UID real de Geometry Dash/Geode.
+- Añade medición PCM previa al encoder. La consola distingue una señal real de paquetes AAC que contienen silencio y muestra el nivel en dBFS.
+- Conserva el loopback con render al altavoz/audífonos; no instala servicios ni modifica permisos persistentes.
+
 # v0.2.0-beta.7
 
 - Fixed Goodix BERLIN report-rate detection: the verified human-readable

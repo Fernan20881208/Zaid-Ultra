@@ -30,6 +30,11 @@ struct ReplayAudioStatus final {
     double bufferedSeconds = 0.0;
     double bufferedMiB = 0.0;
     std::size_t packetCount = 0;
+    bool signalMeasured = false;
+    bool signalPresent = false;
+    double signalDbfs = -120.0;
+    double signalPeak = 0.0;
+    int targetUid = -1;
     std::string summary = "audio desactivado";
     std::string lastError;
 };
@@ -57,6 +62,10 @@ private:
         std::vector<std::uint8_t> payload,
         std::int64_t ptsUs,
         std::uint32_t flags,
+        std::uint64_t generation
+    );
+    void acceptTelemetry(
+        std::vector<std::uint8_t> const& payload,
         std::uint64_t generation
     );
     void pruneLocked();

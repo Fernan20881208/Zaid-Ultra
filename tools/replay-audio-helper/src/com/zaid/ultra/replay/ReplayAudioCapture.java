@@ -19,6 +19,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * Small app_process helper used by Zaid-Ultra's ROOT replay backend.
@@ -34,6 +35,12 @@ public final class ReplayAudioCapture {
     private static final int MAX_READ_BYTES = 1024 * CHANNELS * BYTES_PER_SAMPLE;
     private static final int AAC_BIT_RATE = 192_000;
     private static final int PACKET_MAGIC = 0x5a554131; // ZUA1
+    private static final int TELEMETRY_FLAG = 0x40000000;
+    private static final int[] PLAYBACK_USAGES = {
+            AudioAttributes.USAGE_UNKNOWN,
+            AudioAttributes.USAGE_MEDIA,
+            AudioAttributes.USAGE_GAME,
+    };
 
     private static Object retainedAudioPolicy;
 
@@ -90,7 +97,7 @@ public final class ReplayAudioCapture {
                 .build();
     }
 
-    private static AudioRecord createPlaybackRecorder(Context context) throws Exception {
+    private static AudioRecord createPlaybackRecorder(Context context, int targetUid) throws Exception {
         Class<?> ruleClass = Class.forName("android.media.audiopolicy.AudioMixingRule");
         Class<?> ruleBuilderClass = Class.forName("android.media.audiopolicy.AudioMixingRule$Builder");
         Object ruleBuilder = ruleBuilderClass.getConstructor().newInstance();
@@ -98,12 +105,25 @@ public final class ReplayAudioCapture {
         int playersRole = ruleClass.getField("MIX_ROLE_PLAYERS").getInt(null);
         ruleBuilderClass.getMethod("setTargetMixRole", int.class).invoke(ruleBuilder, playersRole);
 
-        AudioAttributes media = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .build();
         int matchUsage = ruleClass.getField("RULE_MATCH_ATTRIBUTE_USAGE").getInt(null);
-        ruleBuilderClass.getMethod("addMixRule", int.class, Object.class)
-                .invoke(ruleBuilder, matchUsage, media);
+        Method addMixRule = ruleBuilderClass.getMethod("addMixRule", int.class, Object.class);
+        // Android's official playback-capture contract permits UNKNOWN, MEDIA
+        // and GAME. FMOD commonly marks game output as USAGE_GAME, so matching
+        // only USAGE_MEDIA produces valid AAC packets containing silence.
+        for (int usage : PLAYBACK_USAGES) {
+            AudioAttributes attributes = new AudioAttributes.Builder()
+                    .setUsage(usage)
+                    .build();
+            addMixRule.invoke(ruleBuilder, matchUsage, attributes);
+        }
+
+        // Restrict the loopback to Geometry Dash / Geode's real Linux UID.
+        // Combining UID and usage predicates is the same selection model used
+        // by AudioPlaybackCaptureConfiguration, without MediaProjection.
+        if (targetUid >= 0) {
+            int matchUid = ruleClass.getField("RULE_MATCH_UID").getInt(null);
+            addMixRule.invoke(ruleBuilder, matchUid, Integer.valueOf(targetUid));
+        }
 
         try {
             ruleBuilderClass.getMethod("voiceCommunicationCaptureAllowed", boolean.class)
@@ -149,6 +169,77 @@ public final class ReplayAudioCapture {
         return recorder;
     }
 
+    private static int parseTargetUid(String[] args) {
+        for (int index = 0; index + 1 < args.length; ++index) {
+            if ("--target-uid".equals(args[index])) {
+                try {
+                    int uid = Integer.parseInt(args[index + 1]);
+                    return uid >= 0 ? uid : -1;
+                } catch (NumberFormatException ignored) {
+                    return -1;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static void updateSignal(
+            ByteBuffer pcm,
+            int byteCount,
+            SignalWindow signal
+    ) {
+        // AudioRecord PCM16 is native-endian (little-endian on Android64).
+        ByteBuffer samples = pcm.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+        int sampleCount = byteCount / BYTES_PER_SAMPLE;
+        for (int index = 0; index < sampleCount; ++index) {
+            int value = samples.getShort(index * BYTES_PER_SAMPLE);
+            int absolute = Math.abs(value);
+            signal.peak = Math.max(signal.peak, absolute);
+            signal.squareSum += (double) value * value;
+            if (absolute > 8) {
+                ++signal.nonZeroSamples;
+            }
+        }
+        signal.samples += sampleCount;
+        signal.frames += sampleCount / CHANNELS;
+    }
+
+    private static void emitSignalIfReady(
+            DataOutputStream output,
+            SignalWindow signal,
+            long ptsUs,
+            int targetUid
+    ) throws Exception {
+        if (signal.frames < SAMPLE_RATE || signal.samples == 0) {
+            return;
+        }
+        double rms = Math.sqrt(signal.squareSum / signal.samples);
+        int rmsMilli = (int) Math.min(Integer.MAX_VALUE, Math.round(rms * 1000.0));
+        ByteBuffer payload = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN);
+        payload.putInt(signal.peak);
+        payload.putInt(rmsMilli);
+        payload.putInt((int) Math.min(Integer.MAX_VALUE, signal.nonZeroSamples));
+        payload.putInt(targetUid);
+        writePacket(output, payload.array(), ptsUs, TELEMETRY_FLAG);
+        signal.reset();
+    }
+
+    private static final class SignalWindow {
+        long frames;
+        long samples;
+        long nonZeroSamples;
+        double squareSum;
+        int peak;
+
+        void reset() {
+            frames = 0;
+            samples = 0;
+            nonZeroSamples = 0;
+            squareSum = 0;
+            peak = 0;
+        }
+    }
+
     private static void writePacket(
             DataOutputStream output,
             byte[] payload,
@@ -190,9 +281,10 @@ public final class ReplayAudioCapture {
         return true;
     }
 
-    private static void runCapture() throws Exception {
+    private static void runCapture(String[] args) throws Exception {
+        int targetUid = parseTargetUid(args);
         Context context = createSystemContext();
-        AudioRecord recorder = createPlaybackRecorder(context);
+        AudioRecord recorder = createPlaybackRecorder(context, targetUid);
         MediaCodec encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
 
         MediaFormat encoderFormat = MediaFormat.createAudioFormat(
@@ -209,6 +301,7 @@ public final class ReplayAudioCapture {
                 new FileOutputStream(FileDescriptor.out), 64 * 1024));
         AudioTimestamp timestamp = new AudioTimestamp();
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+        SignalWindow signal = new SignalWindow();
         long nextPtsUs = 0;
         long previousPtsUs = 0;
         boolean configWritten = false;
@@ -236,6 +329,8 @@ public final class ReplayAudioCapture {
                         throw new IllegalStateException("AudioRecord.read=" + count);
                     }
 
+                    updateSignal(input, count, signal);
+
                     long ptsUs;
                     if (recorder.getTimestamp(timestamp, AudioTimestamp.TIMEBASE_MONOTONIC)
                             == AudioRecord.SUCCESS) {
@@ -252,6 +347,7 @@ public final class ReplayAudioCapture {
                             / (CHANNELS * BYTES_PER_SAMPLE * SAMPLE_RATE);
                     nextPtsUs = ptsUs + durationUs;
                     previousPtsUs = ptsUs;
+                    emitSignalIfReady(output, signal, ptsUs, targetUid);
                     encoder.queueInputBuffer(inputIndex, 0, count, ptsUs, 0);
                 }
 
@@ -307,7 +403,7 @@ public final class ReplayAudioCapture {
 
     public static void main(String[] args) {
         try {
-            runCapture();
+            runCapture(args);
         } catch (Throwable error) {
             System.err.println("ZU_AUDIO_ERROR: " + error);
             error.printStackTrace(System.err);

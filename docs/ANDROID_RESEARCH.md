@@ -115,12 +115,29 @@ there is no broad `pkill`.
 
 Raw `screenrecord` contains no audio, so audio is kept in a separate reversible
 module. A small dex helper runs only for the PlayLayer lifetime through ROOT
-`app_process`. On Android 13+ it registers an AudioPolicy mix matching
-`USAGE_MEDIA` with `ROUTE_FLAG_LOOP_BACK_RENDER`, which loops playback into an
-AudioRecord while retaining the normal device output. PCM is hardware-encoded
-to AAC-LC at 48 kHz stereo / 192 kbps. Each packet carries a monotonic
-AudioRecord/MediaCodec PTS over a framed pipe; the native ring retains at most
-72 seconds or 4 MiB and MediaMuxer interleaves it with AVC relative to the
-selected video keyframe. No MediaProjection token or persistent audio setting
-is used. If the hidden OEM AudioPolicy path is incompatible, the helper exits,
-its error is shown in the console, and replay continues safely as video-only.
+`app_process`. On Android 13+ it registers an AudioPolicy mix matching the
+three playback-capture usages allowed by Android (`USAGE_UNKNOWN`,
+`USAGE_MEDIA`, and `USAGE_GAME`) and the exact Geometry Dash/Geode Linux UID.
+The mix uses `ROUTE_FLAG_LOOP_BACK_RENDER`, which loops playback into an
+AudioRecord while retaining the normal device output. The UID predicate avoids
+recording unrelated apps or notification audio. PCM is measured before the
+encoder so the console can distinguish a real signal from valid AAC packets
+that contain silence, then hardware-encoded to AAC-LC at 48 kHz stereo /
+192 kbps. Each packet carries a monotonic AudioRecord/MediaCodec PTS over a
+framed pipe; the native ring retains at most 72 seconds or 4 MiB and MediaMuxer
+interleaves it with AVC relative to the selected video keyframe.
+
+MediaProjection playback capture was not selected for this in-mod backend: it
+requires a user-granted projection token, `RECORD_AUDIO`, and on current Android
+targets a declared foreground service of type `mediaProjection`. Those manifest
+requirements belong to an APK and cannot be added safely by a `.geode` resource
+at runtime. The scoped ROOT AudioPolicy route changes no persistent permission
+or audio setting and disappears with the helper process. If the OEM path is
+incompatible, the helper exits, its error/signal state is shown in the console,
+and replay continues safely as video-only.
+
+References:
+
+- [Android AudioPlaybackCaptureConfiguration](https://developer.android.com/reference/android/media/AudioPlaybackCaptureConfiguration)
+- [Android MediaProjection foreground-service requirements](https://developer.android.com/media/grow/media-projection)
+- [AOSP AudioMix `ROUTE_FLAG_LOOP_BACK_RENDER`](https://cs.android.com/android/platform/superproject/main/+/main:frameworks/base/media/java/android/media/audiopolicy/AudioMix.java)

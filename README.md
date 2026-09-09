@@ -35,10 +35,12 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
   pause/end Clip button saves existing frames without restarting capture.
   The frozen ring remains saveable after PlayLayer exits into the end-level
   menu.
-  A separate ROOT AudioPolicy helper captures `USAGE_MEDIA` with
-  `LOOP_BACK_RENDER`, keeps local playback active, and supplies timestamped
-  AAC-LC packets at 48 kHz stereo. Android MediaMuxer produces the final A/V
-  MP4 when accepted, with video-only and raw-H.264 diagnostic fallbacks.
+  A separate ROOT AudioPolicy helper captures `USAGE_GAME`, `USAGE_MEDIA` and
+  `USAGE_UNKNOWN` only from the Geometry Dash/Geode UID with
+  `LOOP_BACK_RENDER`, keeps local playback active, verifies the PCM signal,
+  and supplies timestamped AAC-LC packets at 48 kHz stereo. Android MediaMuxer
+  produces the final A/V MP4 when accepted, with video-only and raw-H.264
+  diagnostic fallbacks.
 
 ### duchamp validation
 

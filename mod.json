@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.7",
+  "version": "v0.2.0-beta.8",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -168,7 +168,7 @@
     "instant-replay-audio": {
       "type": "bool",
       "name": "Audio interno del replay",
-      "description": "Captura USAGE_MEDIA mediante un loopback ROOT temporal y lo codifica como AAC 48 kHz estéreo. Mantiene activo el altavoz o los audífonos y no utiliza MediaProjection.",
+      "description": "Captura por UID las rutas Android permitidas para juegos (USAGE_GAME, MEDIA y UNKNOWN) mediante un loopback ROOT temporal, y verifica el nivel PCM antes de codificar AAC 48 kHz estéreo. Mantiene activo el altavoz o los audífonos.",
       "default": true,
       "platforms": ["android"],
       "enable-if": "instant-replay"
