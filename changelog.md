@@ -1,3 +1,12 @@
+# v0.2.0-beta.4
+
+- Fixed the Android 16 crash when entering a level under Geode Launcher.
+- Replaced the nonexistent `Cocos2dxActivity.getContext()` JNI call with the
+  launcher's preserved `BaseRobTopActivity` activity reference.
+- Added strict exception cleanup to both the current-launcher and legacy JNI
+  lookup paths so a failed optional lookup cannot poison the next mod's JNI
+  call and trigger an ART abort.
+
 # v0.2.0-beta.3
 
 - Hardened Android startup after an on-device crash while Geode was loading

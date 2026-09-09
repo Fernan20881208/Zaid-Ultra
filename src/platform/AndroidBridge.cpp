@@ -43,26 +43,140 @@ bool consumeException(JNIEnv* env, std::string& error, char const* stage) {
     return true;
 }
 
-jobject getActivity(JNIEnv* env, std::string& error) {
-    cocos2d::JniMethodInfo method;
-    if (!cocos2d::JniHelper::getStaticMethodInfo(
-        method,
-        "org/cocos2dx/lib/Cocos2dxActivity",
-        "getContext",
-        "()Landroid/content/Context;"
-    )) {
-        error = "Cocos2dxActivity.getContext unavailable";
+jobject getLauncherActivity(JNIEnv* env, std::string& error) {
+    // Geode Launcher 1.8+ does not expose Cocos2dxActivity.getContext(). Its
+    // real GeometryDashActivity is kept in BaseRobTopActivity.me; the launcher's
+    // ProGuard rules preserve this compatibility class and all of its members.
+    auto bridgeClass = env->FindClass("com/customRobTop/BaseRobTopActivity");
+    if (consumeException(env, error, "BaseRobTopActivity class") || !bridgeClass) {
         return nullptr;
     }
-    auto activity = method.env->CallStaticObjectMethod(method.classID, method.methodID);
-    method.env->DeleteLocalRef(method.classID);
-    if (consumeException(method.env, error, "getContext") || !activity) {
-        if (activity) {
-            method.env->DeleteLocalRef(activity);
+
+    auto instanceField = env->GetStaticFieldID(
+        bridgeClass,
+        "INSTANCE",
+        "Lcom/customRobTop/BaseRobTopActivity;"
+    );
+    if (consumeException(env, error, "BaseRobTopActivity.INSTANCE") || !instanceField) {
+        env->DeleteLocalRef(bridgeClass);
+        return nullptr;
+    }
+
+    auto bridge = env->GetStaticObjectField(bridgeClass, instanceField);
+    if (consumeException(env, error, "BaseRobTopActivity instance") || !bridge) {
+        env->DeleteLocalRef(bridgeClass);
+        return nullptr;
+    }
+
+    auto getMe = env->GetMethodID(
+        bridgeClass,
+        "getMe",
+        "()Ljava/lang/ref/WeakReference;"
+    );
+    if (consumeException(env, error, "BaseRobTopActivity.getMe") || !getMe) {
+        env->DeleteLocalRef(bridge);
+        env->DeleteLocalRef(bridgeClass);
+        return nullptr;
+    }
+
+    auto weakActivity = env->CallObjectMethod(bridge, getMe);
+    if (consumeException(env, error, "BaseRobTopActivity.getMe call") || !weakActivity) {
+        env->DeleteLocalRef(bridge);
+        env->DeleteLocalRef(bridgeClass);
+        return nullptr;
+    }
+
+    auto weakClass = env->GetObjectClass(weakActivity);
+    if (consumeException(env, error, "WeakReference class") || !weakClass) {
+        env->DeleteLocalRef(weakActivity);
+        env->DeleteLocalRef(bridge);
+        env->DeleteLocalRef(bridgeClass);
+        return nullptr;
+    }
+    auto weakGet = env->GetMethodID(weakClass, "get", "()Ljava/lang/Object;");
+    if (consumeException(env, error, "WeakReference.get") || !weakGet) {
+        env->DeleteLocalRef(weakClass);
+        env->DeleteLocalRef(weakActivity);
+        env->DeleteLocalRef(bridge);
+        env->DeleteLocalRef(bridgeClass);
+        return nullptr;
+    }
+
+    auto activity = env->CallObjectMethod(weakActivity, weakGet);
+    auto callFailed = consumeException(env, error, "WeakReference.get call");
+    env->DeleteLocalRef(weakClass);
+    env->DeleteLocalRef(weakActivity);
+    env->DeleteLocalRef(bridge);
+    env->DeleteLocalRef(bridgeClass);
+    if (callFailed || !activity) {
+        if (!callFailed) {
+            error = "Geode Launcher activity reference is empty";
         }
         return nullptr;
     }
     return activity;
+}
+
+jobject getLegacyActivity(JNIEnv* env, std::string& error) {
+    cocos2d::JniMethodInfo method{};
+    auto found = cocos2d::JniHelper::getStaticMethodInfo(
+        method,
+        "org/cocos2dx/lib/Cocos2dxActivity",
+        "getContext",
+        "()Landroid/content/Context;"
+    );
+    // JniHelper does not guarantee that GetStaticMethodID exceptions are
+    // cleared. Consume it before any other JNI operation; Android ART aborts
+    // if a later FindClass runs with this NoSuchMethodError still pending.
+    auto lookupFailed = consumeException(env, error, "legacy Cocos2dxActivity.getContext lookup");
+    if (!found || lookupFailed) {
+        if (method.classID) {
+            env->DeleteLocalRef(method.classID);
+        }
+        if (!lookupFailed) {
+            error = "Cocos2dxActivity.getContext unavailable";
+        }
+        return nullptr;
+    }
+
+    auto activity = method.env->CallStaticObjectMethod(method.classID, method.methodID);
+    auto callFailed = consumeException(method.env, error, "legacy Cocos2dxActivity.getContext call");
+    method.env->DeleteLocalRef(method.classID);
+    if (callFailed || !activity) {
+        if (activity) {
+            method.env->DeleteLocalRef(activity);
+        }
+        if (!callFailed) {
+            error = "Cocos2dxActivity.getContext returned null";
+        }
+        return nullptr;
+    }
+    return activity;
+}
+
+jobject getActivity(JNIEnv* env, std::string& error) {
+    if (!env) {
+        error = "JNIEnv unavailable";
+        return nullptr;
+    }
+    if (consumeException(env, error, "activity bridge entry")) {
+        return nullptr;
+    }
+
+    std::string launcherError;
+    if (auto activity = getLauncherActivity(env, launcherError)) {
+        return activity;
+    }
+
+    std::string legacyError;
+    if (auto activity = getLegacyActivity(env, legacyError)) {
+        return activity;
+    }
+
+    error = fmt::format("Launcher activity unavailable: {}; legacy: {}", launcherError, legacyError);
+    // Both lookup paths promise to leave JNI with no pending exception.
+    consumeException(env, error, "activity bridge exit");
+    return nullptr;
 }
 
 jobject getDisplay(JNIEnv* env, jobject activity, std::string& error) {
@@ -72,13 +186,13 @@ jobject getDisplay(JNIEnv* env, jobject activity, std::string& error) {
         "getWindowManager",
         "()Landroid/view/WindowManager;"
     );
-    if (!getWindowManager || consumeException(env, error, "getWindowManager method")) {
+    if (consumeException(env, error, "getWindowManager method") || !getWindowManager) {
         env->DeleteLocalRef(activityClass);
         return nullptr;
     }
     auto windowManager = env->CallObjectMethod(activity, getWindowManager);
     env->DeleteLocalRef(activityClass);
-    if (!windowManager || consumeException(env, error, "getWindowManager")) {
+    if (consumeException(env, error, "getWindowManager") || !windowManager) {
         return nullptr;
     }
 
@@ -88,12 +202,14 @@ jobject getDisplay(JNIEnv* env, jobject activity, std::string& error) {
         "getDefaultDisplay",
         "()Landroid/view/Display;"
     );
-    auto display = getDefaultDisplay
+    auto methodFailed = consumeException(env, error, "getDefaultDisplay method");
+    auto display = !methodFailed && getDefaultDisplay
         ? env->CallObjectMethod(windowManager, getDefaultDisplay)
         : nullptr;
+    auto callFailed = consumeException(env, error, "getDefaultDisplay call");
     env->DeleteLocalRef(managerClass);
     env->DeleteLocalRef(windowManager);
-    if (!display || consumeException(env, error, "getDefaultDisplay")) {
+    if (methodFailed || callFailed || !display) {
         return nullptr;
     }
     return display;
@@ -102,9 +218,11 @@ jobject getDisplay(JNIEnv* env, jobject activity, std::string& error) {
 float displayRefreshRate(JNIEnv* env, jobject display, std::string& error) {
     auto displayClass = env->GetObjectClass(display);
     auto getRefreshRate = env->GetMethodID(displayClass, "getRefreshRate", "()F");
-    auto refresh = getRefreshRate ? env->CallFloatMethod(display, getRefreshRate) : 0.0f;
+    auto methodFailed = consumeException(env, error, "Display.getRefreshRate method");
+    auto refresh = !methodFailed && getRefreshRate ? env->CallFloatMethod(display, getRefreshRate) : 0.0f;
+    auto callFailed = consumeException(env, error, "Display.getRefreshRate call");
     env->DeleteLocalRef(displayClass);
-    if (!getRefreshRate || consumeException(env, error, "Display.getRefreshRate")) {
+    if (methodFailed || callFailed || !getRefreshRate) {
         return 0.0f;
     }
     return refresh;

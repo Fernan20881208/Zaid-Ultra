@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.3",
+  "version": "v0.2.0-beta.4",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
