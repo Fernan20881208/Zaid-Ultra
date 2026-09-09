@@ -1,13 +1,11 @@
 #include "LatencyManager.hpp"
 
+#include "core/RootExecutor.hpp"
+#include "core/Settings.hpp"
+
 #include <Geode/Geode.hpp>
 
 #include <cerrno>
-#include <cstdlib>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <thread>
 
 #ifdef GEODE_IS_ANDROID
 #include <EGL/egl.h>
@@ -20,31 +18,6 @@
 using namespace geode::prelude;
 
 namespace zaid::ultra {
-namespace {
-
-constexpr auto kGoodixReportRate = "/sys/devices/platform/goodix_ts.0/switch_report_rate";
-constexpr auto kSpeedTouch = "/sys/module/metis/parameters/speed_touch_enable";
-
-bool setting(const char* key) {
-    return Mod::get()->getSettingValue<bool>(key);
-}
-
-std::string readFirstLine(const char* path) {
-    std::ifstream file(path);
-    std::string line;
-    if (!file.good() || !std::getline(file, line)) {
-        return "<no disponible>";
-    }
-    return line;
-}
-
-#ifdef GEODE_IS_ANDROID
-long currentThreadId() {
-    return static_cast<long>(::syscall(SYS_gettid));
-}
-#endif
-
-} // namespace
 
 LatencyManager& LatencyManager::get() {
     static LatencyManager instance;
@@ -53,146 +26,177 @@ LatencyManager& LatencyManager::get() {
 
 void LatencyManager::prime() {
 #ifdef GEODE_IS_ANDROID
-    if (setting("diagnostic-logs")) {
-        log::info("Zaid-Ultra low-latency backend loaded on Android");
-        logTouchStatus("carga");
+    if (settings::diagnostics()) {
+        log::info("Zaid-Ultra reversible latency backend loaded on Android64");
     }
 #else
     log::warn("Zaid-Ultra low-latency backend is Android-only");
 #endif
 }
 
-void LatencyManager::onGameplayThread() {
+void LatencyManager::begin() {
 #ifdef GEODE_IS_ANDROID
-    const auto tid = currentThreadId();
+    // Defensive: PlayLayer can be recreated by restart/replay flows.
+    end();
 
-    if (setting("diagnostic-logs")) {
-        log::info("Gameplay thread detected: tid={}", tid);
+    ThreadTuningStatus status;
+    status.active = true;
+    status.threadId = currentThreadId();
+
+    errno = 0;
+    auto timerSlack = ::prctl(PR_GET_TIMERSLACK, 0UL, 0UL, 0UL, 0UL);
+    if (timerSlack >= 0) {
+        status.originalTimerSlackNs = timerSlack;
+        status.timerSlackCaptured = true;
     }
 
-    applyThreadTuning();
-    applyRenderTuning();
-    queueRootTuning(tid);
-#else
-    return;
-#endif
-}
+    errno = 0;
+    auto originalNice = ::getpriority(PRIO_PROCESS, static_cast<id_t>(status.threadId));
+    if (errno == 0) {
+        status.originalNice = originalNice;
+        status.niceCaptured = true;
+    }
 
-void LatencyManager::applyThreadTuning() {
-#ifdef GEODE_IS_ANDROID
-    const auto tid = currentThreadId();
+    if (settings::enabled("minimum-timer-slack") && status.timerSlackCaptured) {
+        status.timerSlackApplied = ::prctl(PR_SET_TIMERSLACK, 1UL, 0UL, 0UL, 0UL) == 0;
+    }
 
-    if (setting("minimum-timer-slack")) {
-        errno = 0;
-        const int result = ::prctl(PR_SET_TIMERSLACK, 1UL, 0UL, 0UL, 0UL);
-        if (setting("diagnostic-logs")) {
-            if (result == 0) {
-                log::info("Timer slack del hilo de juego ajustado a 1 ns");
-            } else {
-                log::warn("No se pudo reducir timer slack (errno={})", errno);
-            }
+    if (settings::enabled("game-thread-priority") && status.niceCaptured) {
+        status.priorityApplied = ::setpriority(
+            PRIO_PROCESS,
+            static_cast<id_t>(status.threadId),
+            -8
+        ) == 0;
+        if (!status.priorityApplied) {
+            status.priorityRootFallback = true;
+            queuePriorityChange(status.threadId, -8, false);
         }
     }
 
-    if (setting("game-thread-priority")) {
-        errno = 0;
-        const int result = ::setpriority(PRIO_PROCESS, static_cast<id_t>(tid), -8);
-        if (setting("diagnostic-logs")) {
-            if (result == 0) {
-                log::info("Prioridad del hilo de juego elevada directamente (nice=-8)");
-            } else {
-                log::debug("Android rechazó setpriority directo (errno={}); se intentará respaldo ROOT", errno);
-            }
-        }
-    }
-#endif
-}
-
-void LatencyManager::applyRenderTuning() {
-#ifdef GEODE_IS_ANDROID
-    if (!setting("experimental-no-vsync")) {
-        return;
+    if (settings::enabled("experimental-no-vsync")) {
+        auto display = ::eglGetCurrentDisplay();
+        status.noVsyncApplied = display != EGL_NO_DISPLAY &&
+            ::eglSwapInterval(display, 0) == EGL_TRUE;
     }
 
-    const EGLDisplay display = ::eglGetCurrentDisplay();
-    if (display == EGL_NO_DISPLAY) {
-        if (setting("diagnostic-logs")) {
-            log::warn("No-VSync: no hay EGLDisplay actual");
-        }
-        return;
-    }
-
-    const EGLBoolean result = ::eglSwapInterval(display, 0);
-    if (setting("diagnostic-logs")) {
-        if (result == EGL_TRUE) {
-            log::info("No-VSync experimental solicitado: EGL swap interval = 0");
-        } else {
-            log::warn("EGL rechazó swap interval 0 (error=0x{:x})", static_cast<unsigned>(::eglGetError()));
-        }
-    }
-#endif
-}
-
-void LatencyManager::queueRootTuning(long gameThreadId) {
-#ifdef GEODE_IS_ANDROID
-    const bool touchBoost = setting("root-touch-boost");
-    const bool priorityBoost = setting("game-thread-priority");
-
-    if (!touchBoost && !priorityBoost) {
-        return;
-    }
-
-    if (m_rootWorkRunning.exchange(true)) {
-        return;
-    }
-
-    const bool diagnostics = setting("diagnostic-logs");
-
-    std::thread([this, touchBoost, priorityBoost, diagnostics, gameThreadId] {
-        std::ostringstream rootScript;
-
-        if (touchBoost) {
-            // These are deliberately limited to the two nodes already verified on duchamp.
-            rootScript
-                << "if [ -e " << kGoodixReportRate << " ]; then echo 1 > " << kGoodixReportRate << "; fi; "
-                << "if [ -e " << kSpeedTouch << " ]; then echo 1 > " << kSpeedTouch << "; fi; ";
-        }
-
-        if (priorityBoost && gameThreadId > 0) {
-            // nice=-10 is aggressive but still normal CFS scheduling, not realtime/FIFO.
-            rootScript
-                << "renice -n -10 -p " << gameThreadId << " >/dev/null 2>&1 || true; ";
-        }
-
-        const std::string command = "su -c '" + rootScript.str() + "'";
-        const int result = std::system(command.c_str());
-
-        if (diagnostics) {
-            log::info("ROOT low-latency command finished with code {}", result);
-            logTouchStatus("después de ROOT");
-        }
-
-        m_rootWorkRunning.store(false);
-    }).detach();
-#else
-    (void)gameThreadId;
-#endif
-}
-
-void LatencyManager::logTouchStatus(const char* stage) const {
-#ifdef GEODE_IS_ANDROID
-    if (!setting("diagnostic-logs")) {
-        return;
-    }
-
-    log::info(
-        "Touch status [{}]: Goodix='{}', speed_touch='{}'",
-        stage,
-        readFirstLine(kGoodixReportRate),
-        readFirstLine(kSpeedTouch)
+    status.lastAction = fmt::format(
+        "perfil local aplicado: tid={} slack={} nice={}{}",
+        status.threadId,
+        status.timerSlackApplied ? "1ns" : "sin cambio",
+        status.priorityApplied ? "-8" : (status.priorityRootFallback ? "ROOT pendiente" : "sin cambio"),
+        status.noVsyncApplied ? " vsync=0 experimental" : ""
     );
+    {
+        std::lock_guard lock(m_mutex);
+        m_status = status;
+    }
+    if (settings::diagnostics()) {
+        log::info("{}", status.lastAction);
+    }
+#endif
+}
+
+void LatencyManager::end() {
+#ifdef GEODE_IS_ANDROID
+    ThreadTuningStatus status;
+    {
+        std::lock_guard lock(m_mutex);
+        if (!m_status.active) {
+            return;
+        }
+        status = m_status;
+        m_status.active = false;
+    }
+
+    bool slackRestored = true;
+    if (status.timerSlackApplied && status.timerSlackCaptured) {
+        slackRestored = ::prctl(
+            PR_SET_TIMERSLACK,
+            static_cast<unsigned long>(status.originalTimerSlackNs),
+            0UL,
+            0UL,
+            0UL
+        ) == 0;
+    }
+
+    bool niceRestored = true;
+    if ((status.priorityApplied || status.priorityRootFallback) && status.niceCaptured) {
+        niceRestored = ::setpriority(
+            PRIO_PROCESS,
+            static_cast<id_t>(status.threadId),
+            status.originalNice
+        ) == 0;
+        if (!niceRestored) {
+            queuePriorityChange(status.threadId, status.originalNice, true);
+        }
+    }
+
+    bool vsyncRestored = true;
+    if (status.noVsyncApplied) {
+        // EGL exposes no getter for the prior interval. GD's normal Android
+        // path uses interval 1, so this is the documented best-effort restore
+        // for the opt-in experimental toggle.
+        auto display = ::eglGetCurrentDisplay();
+        vsyncRestored = display != EGL_NO_DISPLAY &&
+            ::eglSwapInterval(display, 1) == EGL_TRUE;
+    }
+
+    {
+        std::lock_guard lock(m_mutex);
+        m_status.lastAction = fmt::format(
+            "perfil local restaurado: slack={} nice={} vsync={}",
+            slackRestored,
+            niceRestored ? "sí" : "ROOT pendiente",
+            vsyncRestored
+        );
+    }
+    if (settings::diagnostics()) {
+        log::info("Local latency state restored (slack={}, nice={}, vsync={})", slackRestored, niceRestored, vsyncRestored);
+    }
+#endif
+}
+
+ThreadTuningStatus LatencyManager::status() const {
+    std::lock_guard lock(m_mutex);
+    return m_status;
+}
+
+long LatencyManager::currentThreadId() {
+#ifdef GEODE_IS_ANDROID
+    return static_cast<long>(::syscall(SYS_gettid));
 #else
-    (void)stage;
+    return -1;
+#endif
+}
+
+void LatencyManager::queuePriorityChange(long threadId, int nice, bool restoring) {
+#ifdef GEODE_IS_ANDROID
+    if (threadId <= 0 || nice < -20 || nice > 19) {
+        return;
+    }
+    RootExecutor::get().post([this, threadId, nice, restoring] {
+        auto result = RootExecutor::get().runRoot(fmt::format(
+            "renice -n {} -p {} >/dev/null",
+            nice,
+            threadId
+        ));
+        {
+            std::lock_guard lock(m_mutex);
+            if (!restoring && result.ok()) {
+                m_status.priorityApplied = true;
+            }
+            m_status.lastAction = result.ok()
+                ? (restoring ? "prioridad del hilo restaurada mediante ROOT" : "nice=-8 aplicado mediante ROOT")
+                : fmt::format("renice ROOT falló (exit={})", result.exitCode);
+        }
+        if (settings::diagnostics()) {
+            log::info("ROOT renice tid={} nice={} exit={}", threadId, nice, result.exitCode);
+        }
+    });
+#else
+    (void)threadId;
+    (void)nice;
+    (void)restoring;
 #endif
 }
 

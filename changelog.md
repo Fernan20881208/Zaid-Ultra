@@ -1,3 +1,23 @@
+# v0.2.0-beta.1
+
+- Added modular PlayLayer profiles with deterministic enter/exit restoration.
+- Added Dynamic 120 Hz per-window request, real refresh monitoring and exact
+  AOSP refresh-setting fallback restoration.
+- Added exact heads-up notification snapshot/restore without changing DND or
+  app permissions.
+- Reworked Goodix and `speed_touch` writes behind a persistent crash-recovery
+  snapshot.
+- Added measured own-process memory trim; no process killing or cache-drop
+  placebo commands.
+- Added FMOD output, sample-rate, DSP-buffer and mixer CPU diagnostics plus
+  opt-in pre-init buffer modes.
+- Added CBF-compatible raw touch timestamp, jitter and physics-boundary metrics.
+- Added Extreme Demon detection and manual per-level profiles.
+- Added read-only thermal/frequency/FPS/frametime monitoring and optional HUD.
+- Added a safe root console with predefined actions and no arbitrary shell.
+- Added a read-only HyperOS `screenrecord` capability probe as the prerequisite
+  for the true retroactive 60-second replay backend.
+
 # v0.1.0
 
 - Added Android ultra-low-latency backend.

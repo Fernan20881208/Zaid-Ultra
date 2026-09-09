@@ -1,6 +1,7 @@
 # Zaid-Ultra
 
-All-in-one Geometry Dash / Geode suite focused on performance, input latency and gameplay responsiveness.
+All-in-one Geometry Dash / Geode suite focused on performance, input latency
+and gameplay responsiveness.
 
 ## Current target
 
@@ -8,19 +9,29 @@ All-in-one Geometry Dash / Geode suite focused on performance, input latency and
 - Geode: **5.10.1**
 - First build target: **Android64**
 
-## Ultra Low Latency backend
+## v0.2 modular backend
 
-The first Zaid-Ultra module focuses on Android input-to-frame latency.
+Zaid-Ultra applies a gameplay profile only while `PlayLayer` exists and keeps
+persistent ROOT writes behind one serialized, crash-recoverable state guard.
 
-### Implemented
+### Implemented in the v0.2 beta
 
-- Goodix high report-rate switch through the verified `switch_report_rate` sysfs node.
-- MediaTek `speed_touch_enable` boost when exposed by the kernel.
-- Gameplay-thread priority boost (`nice=-8` directly, ROOT `renice -10` fallback).
-- Gameplay-thread timer slack reduced to 1 ns.
-- Optional experimental EGL swap interval 0 / No-VSync mode.
-- Geode diagnostic logging for touch report rate and boost state.
-- All ROOT work runs asynchronously so level initialization is not blocked by `su`.
+- Dynamic 120 Hz request through the Android window plus an optional AOSP
+  `min_refresh_rate` / `peak_refresh_rate` ROOT fallback.
+- Exact snapshots and restoration for refresh settings, notification heads-up,
+  Goodix report mode and `speed_touch_enable`, including next-launch recovery.
+- Own-process `malloc_trim` with RSS/timing measurement and automatic disabling
+  when it provides no measurable benefit.
+- FMOD/Android audio-route diagnostics and opt-in pre-init DSP buffer modes.
+- Raw Android MotionEvent timestamp metrics that always propagate to CBF:
+  delivery rate, jitter, dispatch age and time to an observed physics boundary.
+- Automatic Extreme Demon profile plus manual `ID:ultra` / `ID:monitor` rules.
+- Read-only CPU/GPU/battery thermal and frequency monitoring, thermal-pressure
+  detection, FPS, frametime, display refresh and optional in-level overlay.
+- Safe Geode console on pause/end screens with fixed diagnostic actions only.
+- Read-only `screenrecord --help` capability probe for the 60-second replay
+  backend. Recording remains disabled until the actual HyperOS flags and audio
+  capabilities are validated on-device.
 
 ### duchamp validation
 
@@ -30,7 +41,12 @@ On the tested Xiaomi/POCO `duchamp` device with Goodix BERLIN 9916R:
 - High report mode: **480 Hz**
 - Measured moving-touch reports: approximately **474-476 Hz effective**
 
-The mod deliberately does **not** disable thermal protection, force realtime/FIFO scheduling, modify CPU governors, or write unknown touch-driver nodes.
+The mod deliberately does **not** disable thermal protection, force
+realtime/FIFO scheduling, kill other processes, modify CPU/GPU governors,
+overclock/undervolt, or write unknown touch-driver nodes.
+
+Detailed semantics and safety boundaries are recorded in
+[`docs/ANDROID_RESEARCH.md`](docs/ANDROID_RESEARCH.md).
 
 ## Build
 

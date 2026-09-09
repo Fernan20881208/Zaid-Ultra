@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.1.0",
+  "version": "v0.2.0-beta.1",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -43,6 +43,114 @@
       "type": "bool",
       "name": "Timer slack mínimo",
       "description": "Reduce el margen de temporizadores del hilo de juego para disminuir retrasos de scheduling. Puede aumentar ligeramente el consumo.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "display-title": {
+      "type": "title",
+      "name": "Pantalla"
+    },
+    "dynamic-120hz": {
+      "type": "bool",
+      "name": "Dynamic 120 Hz Lock",
+      "description": "Solicita 120 Hz solamente durante PlayLayer y restaura los valores anteriores al salir. El monitor registra si HyperOS entrega 60/90 Hz.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "refresh-root-fallback": {
+      "type": "bool",
+      "name": "Respaldo ROOT para 120 Hz",
+      "description": "Además de la preferencia por ventana, usa únicamente los ajustes AOSP min_refresh_rate y peak_refresh_rate. Se guarda y restaura exactamente su estado anterior, incluso tras reiniciar el juego.",
+      "default": true,
+      "platforms": ["android"],
+      "enable-if": "dynamic-120hz"
+    },
+    "interruptions-title": {
+      "type": "title",
+      "name": "Interrupciones"
+    },
+    "notification-guard": {
+      "type": "bool",
+      "name": "Bloquear heads-up durante nivel",
+      "description": "Desactiva temporalmente las notificaciones flotantes mediante el ajuste AOSP correspondiente y restaura exactamente el valor previo. No cambia DND ni permisos de otras apps.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "memory-title": {
+      "type": "title",
+      "name": "Memoria"
+    },
+    "prudent-memory-trim": {
+      "type": "bool",
+      "name": "Memory Trim prudente",
+      "description": "Libera solamente páginas ya libres del propio proceso antes del nivel y mide RSS antes/después. Si no recupera memoria medible, deja de repetirlo durante la sesión.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "audio-title": {
+      "type": "title",
+      "name": "Audio"
+    },
+    "audio-buffer-mode": {
+      "type": "string",
+      "name": "Buffer FMOD",
+      "description": "Original solo diagnostica. Auto seguro solicita antes de iniciar FMOD un bloque compatible con el frames-per-buffer nativo de Android y conserva 4 buffers.",
+      "one-of": ["Original", "Auto seguro", "256 x 4 experimental"],
+      "default": "Original",
+      "requires-restart": true,
+      "platforms": ["android"]
+    },
+    "profiles-title": {
+      "type": "title",
+      "name": "Perfiles de nivel"
+    },
+    "extreme-demon-profile": {
+      "type": "bool",
+      "name": "Perfil Extreme Demon",
+      "description": "Detecta m_demonDifficulty=ExtremeDemon y activa el perfil seguro de latencia/monitorización para ese nivel.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "manual-level-profiles": {
+      "type": "string",
+      "name": "Perfiles manuales",
+      "description": "Lista opcional: ID:ultra o ID:monitor, separada por comas. Ejemplo: 12345:ultra,67890:monitor.",
+      "default": "",
+      "platforms": ["android"]
+    },
+    "monitor-title": {
+      "type": "title",
+      "name": "Monitor"
+    },
+    "thermal-monitor": {
+      "type": "bool",
+      "name": "Monitor térmico",
+      "description": "Lee temperaturas, frecuencias CPU/GPU y presión térmica sin modificar protecciones ni gobernadores.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "telemetry-overlay": {
+      "type": "bool",
+      "name": "Overlay de telemetría",
+      "description": "Muestra FPS, frametime, refresh real, entrega táctil, temperatura y throttling dentro del nivel.",
+      "default": false,
+      "platforms": ["android"]
+    },
+    "cbf-hardware-metrics": {
+      "type": "bool",
+      "name": "Métricas CBF / hardware",
+      "description": "Mide timestamp del MotionEvent, edad de entrega, jitter y tiempo hasta el siguiente límite de física. Solo observa: no altera CBF ni la física.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "console-title": {
+      "type": "title",
+      "name": "Consola segura"
+    },
+    "pause-console-button": {
+      "type": "bool",
+      "name": "Botón ZU en pausa/final",
+      "description": "Añade acceso a la consola de diagnóstico y a las acciones seguras predefinidas.",
       "default": true,
       "platforms": ["android"]
     },
