@@ -5,10 +5,11 @@
 #include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
+#include <Geode/ui/Notification.hpp>
 
 #include "core/SessionManager.hpp"
 #include "core/Settings.hpp"
-#include "modules/ReplayProbe.hpp"
+#include "modules/InstantReplay.hpp"
 #include "modules/TelemetryManager.hpp"
 #include "ui/RootConsolePopup.hpp"
 #include "ui/TelemetryOverlay.hpp"
@@ -41,21 +42,35 @@ CCMenuItemSpriteExtra* makeConsoleButton(CCObject* target, SEL_MenuHandler selec
     return button;
 }
 
-void addConsoleButton(
+CCMenuItemSpriteExtra* makeReplayButton(CCObject* target, SEL_MenuHandler selector) {
+    auto* sprite = ButtonSprite::create("Clip", "bigFont.fnt", "GJ_button_01.png", 0.62f);
+    sprite->setScale(0.54f);
+    auto* button = CCMenuItemSpriteExtra::create(sprite, target, selector);
+    button->setID("zaid-ultra-save-replay-button");
+    return button;
+}
+
+void addUtilityButtons(
     CCNode* parent,
     CCMenu* layoutMenu,
     CCObject* target,
-    SEL_MenuHandler selector
+    SEL_MenuHandler consoleSelector,
+    SEL_MenuHandler replaySelector
 ) {
-    if (!parent || !zaid::ultra::settings::enabled("pause-console-button")) {
+    if (!parent) {
         return;
     }
 
-    auto* button = makeConsoleButton(target, selector);
     if (layoutMenu) {
         // Node IDs supplies aspect-ratio-safe side menus with layouts. Reusing
         // them also lets other pause-menu mods reposition this button cleanly.
-        layoutMenu->addChild(button);
+        if (zaid::ultra::settings::enabled("pause-console-button")) {
+            layoutMenu->addChild(makeConsoleButton(target, consoleSelector));
+        }
+        // Keep the button visible even while replay is disabled so the user
+        // gets a clear in-game prompt to enable it instead of thinking it is
+        // missing from the build.
+        layoutMenu->addChild(makeReplayButton(target, replaySelector));
         layoutMenu->updateLayout();
         return;
     }
@@ -68,13 +83,19 @@ void addConsoleButton(
         size = CCDirector::sharedDirector()->getWinSize();
     }
     auto* menu = CCMenu::create();
-    menu->setContentSize({44.0f, 44.0f});
+    menu->setContentSize({92.0f, 44.0f});
     menu->setAnchorPoint({0.5f, 0.5f});
     menu->ignoreAnchorPointForPosition(false);
-    menu->setPosition({32.0f, size.height - 32.0f});
+    menu->setPosition({56.0f, size.height - 32.0f});
     menu->setID("zaid-ultra-console-menu");
-    button->setPosition({22.0f, 22.0f});
-    menu->addChild(button);
+    if (zaid::ultra::settings::enabled("pause-console-button")) {
+        auto* console = makeConsoleButton(target, consoleSelector);
+        console->setPosition({22.0f, 22.0f});
+        menu->addChild(console);
+    }
+    auto* replay = makeReplayButton(target, replaySelector);
+    replay->setPosition({70.0f, 22.0f});
+    menu->addChild(replay);
     parent->addChild(menu, 1000);
 }
 
@@ -178,16 +199,23 @@ class $modify(ZaidUltraPauseLayer, PauseLayer) {
     void customSetup() {
         PauseLayer::customSetup();
         auto* sideMenu = typeinfo_cast<CCMenu*>(this->getChildByID("left-button-menu"));
-        addConsoleButton(
+        addUtilityButtons(
             this,
             sideMenu,
             this,
-            menu_selector(ZaidUltraPauseLayer::onZaidUltraConsole)
+            menu_selector(ZaidUltraPauseLayer::onZaidUltraConsole),
+            menu_selector(ZaidUltraPauseLayer::onZaidUltraReplay)
         );
     }
 
     void onZaidUltraConsole(CCObject*) {
         showRootConsole();
+    }
+
+    void onZaidUltraReplay(CCObject*) {
+        if (zaid::ultra::InstantReplay::get().saveLast60Seconds()) {
+            Notification::create("Guardando clip retroactivo...", NotificationIcon::Info)->show();
+        }
     }
 };
 
@@ -195,15 +223,22 @@ class $modify(ZaidUltraEndLevelLayer, EndLevelLayer) {
     void customSetup() {
         EndLevelLayer::customSetup();
         auto* sideMenu = typeinfo_cast<CCMenu*>(this->getChildByID("hide-layer-menu"));
-        addConsoleButton(
+        addUtilityButtons(
             this,
             sideMenu,
             this,
-            menu_selector(ZaidUltraEndLevelLayer::onZaidUltraConsole)
+            menu_selector(ZaidUltraEndLevelLayer::onZaidUltraConsole),
+            menu_selector(ZaidUltraEndLevelLayer::onZaidUltraReplay)
         );
     }
 
     void onZaidUltraConsole(CCObject*) {
         showRootConsole();
+    }
+
+    void onZaidUltraReplay(CCObject*) {
+        if (zaid::ultra::InstantReplay::get().saveLast60Seconds()) {
+            Notification::create("Guardando clip retroactivo...", NotificationIcon::Info)->show();
+        }
     }
 };

@@ -5,8 +5,8 @@
 #include "../core/RootStateGuard.hpp"
 #include "../core/SessionManager.hpp"
 #include "../modules/AudioLatency.hpp"
+#include "../modules/InstantReplay.hpp"
 #include "../modules/MemoryTrim.hpp"
-#include "../modules/ReplayProbe.hpp"
 #include "../modules/TelemetryManager.hpp"
 #include "../platform/AndroidBridge.hpp"
 
@@ -95,7 +95,7 @@ bool RootConsolePopup::init() {
         {48.0f, 26.0f}
     );
     m_buttonMenu->addChildAtPosition(
-        actionButton("Replay diag", this, menu_selector(RootConsolePopup::onReplayProbe)),
+        actionButton("Guardar clip", this, menu_selector(RootConsolePopup::onSaveReplay)),
         Anchor::Bottom,
         {142.0f, 26.0f}
     );
@@ -124,7 +124,7 @@ void RootConsolePopup::refreshText() {
     auto telemetry = TelemetryManager::get().snapshot();
     auto memory = MemoryTrim::get().status();
     auto audio = AudioLatency::get().status();
-    auto replay = ReplayProbe::get().status();
+    auto replay = InstantReplay::get().status();
     auto cbfLoaded = Loader::get()->getLoadedMod("syzzi.click_between_frames") != nullptr ||
         Loader::get()->getLoadedMod("zmx.cbf-lite") != nullptr;
 
@@ -151,7 +151,8 @@ void RootConsolePopup::refreshText() {
         "Hilo: {}\n"
         "Trim: {}\n"
         "Audio: {} {} Hz DSP {}x{} (~{:.2f} ms), Android {}/{}\n"
-        "Replay 60 s: diagnóstico previo | {}",
+        "Replay: {} | {:.1f} s / {:.1f} MiB | audio={}\n"
+        "Último clip: {}",
         rootName(root),
         RootExecutor::get().rootUid(),
         uid,
@@ -196,7 +197,11 @@ void RootConsolePopup::refreshText() {
         audio.nominalMixQueueMs,
         audio.androidSampleRate,
         audio.androidFramesPerBuffer,
-        replay.summary
+        replay.summary,
+        replay.bufferedSeconds,
+        replay.bufferedMiB,
+        replay.audioIncluded ? "sí" : "no",
+        replay.lastFile.empty() ? "<ninguno>" : replay.lastFile
     );
     m_text->setText(std::move(text));
 }
@@ -225,18 +230,10 @@ void RootConsolePopup::onRestore(CCObject*) {
     Notification::create("Restaurado; reentra al nivel para reactivar", NotificationIcon::Success)->show();
 }
 
-void RootConsolePopup::onReplayProbe(CCObject*) {
-    auto existing = ReplayProbe::get().details();
-    if (!existing.empty()) {
-        auto copied = PlatformToolbox::copyToClipboard(gd::string(existing.c_str()));
-        Notification::create(
-            copied ? "Ayuda OEM copiada; pégala en el chat" : "No se pudo copiar la ayuda OEM",
-            copied ? NotificationIcon::Success : NotificationIcon::Error
-        )->show();
-        return;
+void RootConsolePopup::onSaveReplay(CCObject*) {
+    if (InstantReplay::get().saveLast60Seconds()) {
+        Notification::create("Preparando los últimos 60 segundos...", NotificationIcon::Info)->show();
     }
-    ReplayProbe::get().run();
-    Notification::create("Sonda iniciada; vuelve a pulsar para copiar", NotificationIcon::Info)->show();
 }
 
 } // namespace zaid::ultra

@@ -30,9 +30,12 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
 - Read-only CPU/GPU/battery thermal and frequency monitoring, thermal-pressure
   detection, FPS, frametime, display refresh and optional in-level overlay.
 - Safe Geode console on pause/end screens with fixed diagnostic actions only.
-- Read-only `screenrecord --help` capability probe for the 60-second replay
-  backend. Recording remains disabled until the actual HyperOS flags and audio
-  capabilities are validated on-device.
+- Opt-in ROOT Instant Replay beta using the device-validated raw-H.264
+  `screenrecord` stream: a bounded encoded ring keeps recent gameplay and the
+  pause/end Clip button saves existing frames without restarting capture.
+  Android MediaMuxer produces MP4 when accepted, with a raw-H.264 diagnostic
+  fallback. Internal audio remains disabled until the verified `REMOTE_SUBMIX`
+  route has exact packet timestamps.
 
 ### duchamp validation
 

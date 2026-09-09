@@ -21,7 +21,7 @@ private:
     void onRefresh(cocos2d::CCObject*);
     void onTrim(cocos2d::CCObject*);
     void onRestore(cocos2d::CCObject*);
-    void onReplayProbe(cocos2d::CCObject*);
+    void onSaveReplay(cocos2d::CCObject*);
 
     geode::SimpleTextArea* m_text = nullptr;
     float m_elapsed = 0.0f;

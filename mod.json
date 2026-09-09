@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.4",
+  "version": "v0.2.0-beta.5",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -147,6 +147,17 @@
       "name": "Métricas CBF / hardware",
       "description": "Mide timestamp del MotionEvent, edad de entrega, jitter y tiempo hasta el siguiente límite de física. Solo observa: no altera CBF ni la física.",
       "default": true,
+      "platforms": ["android"]
+    },
+    "replay-title": {
+      "type": "title",
+      "name": "Instant Replay ROOT"
+    },
+    "instant-replay": {
+      "type": "bool",
+      "name": "Búfer retroactivo de 60 s",
+      "description": "Mantiene vídeo H.264 1280x720 codificado por hardware durante PlayLayer. Guardar Clip conserva el tramo anterior; nunca inicia una grabación nueva. Desactivado por defecto mientras se valida esta beta en tu dispositivo.",
+      "default": false,
       "platforms": ["android"]
     },
     "console-title": {

@@ -96,12 +96,24 @@ Thermal zones, cpufreq policies, GPU devfreq, battery temperature and Linux
 of capacity reduction; the high-temperature/low-frequency indicator is clearly
 labelled heuristic. Zaid-Ultra never disables thermal protection.
 
-## Instant Replay prerequisite
+## Instant Replay
 
-Android's root `screenrecord` implementation captures through the system
-compositor and can avoid MediaProjection, but available flags, display routing,
-maximum duration and internal-audio support vary by Android/OEM build. The beta
-therefore exposes a user-triggered, read-only `screenrecord --help` probe and
-logs the exact output. No recording daemon starts yet. The circular recorder
-will only be enabled after the target HyperOS syntax and audio path are proven;
-pressing Save must finalize already-buffered media, never start a new capture.
+The target HyperOS `screenrecord` v1.4 was tested under KernelSU and accepted
+the undocumented AOSP raw-stream form `--output-format=h264 ... -`. A two-second
+probe exited successfully, emitted 1,047,920 bytes and began with valid Annex B
+SPS/PPS NAL units. The same device exposes `app_process64`, Remote Submix input
+and output ports, and MIUIScreenRecorder.
+
+The first live backend therefore reads only the already-encoded AVC stream on a
+dedicated native thread. It retains at most 72 seconds or 96 MiB and snapshots
+from a keyframe at or after the 60-second cutoff. Save uses Android's NDK
+MediaMuxer dynamically, so no media symbols are resolved while Geode loads; a
+raw AVC file is preserved if OEM muxing fails. Capture is opt-in and exists only
+for the PlayLayer lifetime. The screenrecord PID is written to one fixed file
+and is signalled only after `/proc/<pid>/comm` verifies the exact process name;
+there is no broad `pkill`.
+
+Audio remains excluded from this beta. Although Remote Submix is present, raw
+screenrecord contains no audio or timestamps. A later privileged helper must
+emit encoded audio/video packet boundaries and presentation timestamps before
+the mod can mux synchronized game audio without MediaProjection.

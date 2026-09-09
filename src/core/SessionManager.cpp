@@ -5,6 +5,7 @@
 #include "RootStateGuard.hpp"
 #include "Settings.hpp"
 #include "../modules/AudioLatency.hpp"
+#include "../modules/InstantReplay.hpp"
 #include "../modules/MemoryTrim.hpp"
 #include "../modules/TelemetryManager.hpp"
 #include "../platform/AndroidBridge.hpp"
@@ -83,6 +84,7 @@ void SessionManager::begin() {
 
     AudioLatency::get().refreshDiagnostics();
     TelemetryManager::get().start(profile.thermalMonitor);
+    InstantReplay::get().beginGameplay();
 }
 
 void SessionManager::end() {
@@ -96,6 +98,7 @@ void SessionManager::end() {
         return;
     }
 
+    InstantReplay::get().endGameplay();
     TelemetryManager::get().stop();
     AndroidBridge::get().restoreRefreshRate();
     RootStateGuard::get().end();

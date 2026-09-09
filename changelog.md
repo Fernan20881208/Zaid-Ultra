@@ -1,3 +1,19 @@
+# v0.2.0-beta.5
+
+- Added the first live 60-second ROOT Instant Replay backend for the validated
+  HyperOS raw-H.264 `screenrecord` stream.
+- Capture runs continuously only while PlayLayer is active and only when the
+  opt-in setting is enabled; Save Clip snapshots existing encoded frames and
+  never starts a new recording.
+- Added a bounded 72-second / 96 MiB encoded ring, AVC keyframe-aware trimming,
+  background MP4 remuxing through dynamically loaded Android NDK MediaMuxer,
+  and a raw-H.264 fallback if the device muxer rejects the stream.
+- Added visible Clip buttons to pause and end-level menus plus replay state,
+  duration, memory use and output path in the safe ZU console.
+- Audio is deliberately not claimed in this build. The verified
+  `REMOTE_SUBMIX` route will be integrated only through a timestamped helper so
+  it cannot desynchronize or destabilize Geometry Dash.
+
 # v0.2.0-beta.4
 
 - Fixed the Android 16 crash when entering a level under Geode Launcher.
