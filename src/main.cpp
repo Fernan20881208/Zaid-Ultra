@@ -6,6 +6,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/System.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
+#include <Geode/loader/SettingV3.hpp>
 
 #include "core/SessionManager.hpp"
 #include "core/Settings.hpp"
@@ -34,18 +35,47 @@ void showRootConsole() {
     }
 }
 
-void addConsoleButton(CCNode* parent, CCObject* target, SEL_MenuHandler selector, CCPoint position) {
-    if (!parent || !zaid::ultra::settings::enabled("pause-console-button")) {
-        return;
-    }
-    auto* menu = CCMenu::create();
-    menu->setPosition({0.0f, 0.0f});
-    menu->setID("zaid-ultra-console-menu");
+CCMenuItemSpriteExtra* makeConsoleButton(CCObject* target, SEL_MenuHandler selector) {
     auto* sprite = ButtonSprite::create("ZU", "bigFont.fnt", "GJ_button_05.png", 0.72f);
     sprite->setScale(0.62f);
     auto* button = CCMenuItemSpriteExtra::create(sprite, target, selector);
     button->setID("zaid-ultra-console-button");
-    button->setPosition(position);
+    return button;
+}
+
+void addConsoleButton(
+    CCNode* parent,
+    CCMenu* layoutMenu,
+    CCObject* target,
+    SEL_MenuHandler selector
+) {
+    if (!parent || !zaid::ultra::settings::enabled("pause-console-button")) {
+        return;
+    }
+
+    auto* button = makeConsoleButton(target, selector);
+    if (layoutMenu) {
+        // Node IDs supplies aspect-ratio-safe side menus with layouts. Reusing
+        // them also lets other pause-menu mods reposition this button cleanly.
+        layoutMenu->addChild(button);
+        layoutMenu->updateLayout();
+        return;
+    }
+
+    // Standalone fallback when Node IDs is unavailable. A small, explicitly
+    // anchored menu avoids CCMenu's default full-screen anchor transform,
+    // which could place the old absolute-position button outside the screen.
+    auto size = parent->getContentSize();
+    if (size.width < 100.0f || size.height < 100.0f) {
+        size = CCDirector::sharedDirector()->getWinSize();
+    }
+    auto* menu = CCMenu::create();
+    menu->setContentSize({44.0f, 44.0f});
+    menu->setAnchorPoint({0.5f, 0.5f});
+    menu->ignoreAnchorPointForPosition(false);
+    menu->setPosition({32.0f, size.height - 32.0f});
+    menu->setID("zaid-ultra-console-menu");
+    button->setPosition({22.0f, 22.0f});
     menu->addChild(button);
     parent->addChild(menu, 1000);
 }
@@ -59,6 +89,14 @@ bool externalCbfLoaded() {
 
 $on_mod(Loaded) {
     zaid::ultra::SessionManager::get().prime();
+
+    // Permanent fallback: the console can also be opened from Zaid-Ultra's
+    // settings even if another mod completely replaces the pause UI.
+    ButtonSettingPressedEventV3(Mod::get(), "console-actions").listen([](auto buttonKey) {
+        if (buttonKey == "open-console") {
+            showRootConsole();
+        }
+    }).leak();
 
 #ifdef GEODE_IS_ANDROID
     // Observe MotionEvent timestamps at Geode's raw Android boundary. Returning
@@ -154,12 +192,12 @@ class $modify(ZaidUltraPlayLayer, PlayLayer) {
 class $modify(ZaidUltraPauseLayer, PauseLayer) {
     void customSetup() {
         PauseLayer::customSetup();
-        auto size = CCDirector::sharedDirector()->getWinSize();
+        auto* sideMenu = typeinfo_cast<CCMenu*>(this->getChildByID("left-button-menu"));
         addConsoleButton(
             this,
+            sideMenu,
             this,
-            menu_selector(ZaidUltraPauseLayer::onZaidUltraConsole),
-            {30.0f, size.height - 28.0f}
+            menu_selector(ZaidUltraPauseLayer::onZaidUltraConsole)
         );
     }
 
@@ -171,12 +209,12 @@ class $modify(ZaidUltraPauseLayer, PauseLayer) {
 class $modify(ZaidUltraEndLevelLayer, EndLevelLayer) {
     void customSetup() {
         EndLevelLayer::customSetup();
-        auto size = CCDirector::sharedDirector()->getWinSize();
+        auto* sideMenu = typeinfo_cast<CCMenu*>(this->getChildByID("hide-layer-menu"));
         addConsoleButton(
             this,
+            sideMenu,
             this,
-            menu_selector(ZaidUltraEndLevelLayer::onZaidUltraConsole),
-            {30.0f, size.height - 28.0f}
+            menu_selector(ZaidUltraEndLevelLayer::onZaidUltraConsole)
         );
     }
 

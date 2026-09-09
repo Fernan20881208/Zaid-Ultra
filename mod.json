@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.1",
+  "version": "v0.2.0-beta.2",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -13,6 +13,12 @@
     "gameplay",
     "enhancement"
   ],
+  "dependencies": {
+    "geode.node-ids": {
+      "version": ">=v1.22.0",
+      "required": false
+    }
+  },
   "settings": {
     "latency-title": {
       "type": "title",
@@ -152,6 +158,15 @@
       "name": "Botón ZU en pausa/final",
       "description": "Añade acceso a la consola de diagnóstico y a las acciones seguras predefinidas.",
       "default": true,
+      "platforms": ["android"]
+    },
+    "console-actions": {
+      "type": "button",
+      "name": "Acceso alternativo a ZU",
+      "description": "Abre la consola segura desde los ajustes del mod, incluso si otro mod reemplaza el menú de pausa.",
+      "buttons": {
+        "open-console": "Abrir consola ZU"
+      },
       "platforms": ["android"]
     },
     "experimental-no-vsync": {

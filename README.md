@@ -28,7 +28,8 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
 - Automatic Extreme Demon profile plus manual `ID:ultra` / `ID:monitor` rules.
 - Read-only CPU/GPU/battery thermal and frequency monitoring, thermal-pressure
   detection, FPS, frametime, display refresh and optional in-level overlay.
-- Safe Geode console on pause/end screens with fixed diagnostic actions only.
+- Safe Geode console on pause/end screens with fixed diagnostic actions only,
+  plus an alternate opener in the mod settings for replaced pause menus.
 - Read-only `screenrecord --help` capability probe for the 60-second replay
   backend. Recording remains disabled until the actual HyperOS flags and audio
   capabilities are validated on-device.

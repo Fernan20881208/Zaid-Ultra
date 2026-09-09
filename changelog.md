@@ -1,3 +1,11 @@
+# v0.2.0-beta.2
+
+- Fixed the ZU console button on Android by attaching it to the aspect-ratio-safe
+  PauseLayer/EndLevelLayer side menus when Node IDs is available.
+- Replaced the old absolute-position fallback with an explicitly anchored menu.
+- Added an always-available `Abrir consola ZU` action in the mod settings for
+  compatibility with pause-menu replacement mods.
+
 # v0.2.0-beta.1
 
 - Added modular PlayLayer profiles with deterministic enter/exit restoration.
