@@ -1,5 +1,7 @@
 #include "InstantReplay.hpp"
 
+#include "ReplayAudio.hpp"
+
 #include "../core/RootExecutor.hpp"
 #include "../core/Settings.hpp"
 
@@ -47,6 +49,9 @@ constexpr int kCaptureWidth = 1280;
 constexpr int kCaptureHeight = 720;
 constexpr int kCaptureBitRate = 8'000'000;
 constexpr int kNominalFrameRate = 120;
+constexpr int kAudioSampleRate = 48'000;
+constexpr int kAudioChannelCount = 2;
+constexpr int kAudioBitRate = 192'000;
 constexpr char kPidFile[] = "/data/local/tmp/zaid-ultra-replay-screenrecord.pid";
 constexpr char kErrorFile[] = "/data/local/tmp/zaid-ultra-replay-screenrecord.err";
 
@@ -201,8 +206,12 @@ bool muxAvcToMp4(
     std::vector<InstantReplay::EncodedFrame> const& frames,
     std::vector<std::uint8_t> const& sps,
     std::vector<std::uint8_t> const& pps,
+    std::vector<EncodedAudioFrame> const& audioFrames,
+    std::vector<std::uint8_t> const& audioCsd,
+    bool& audioMuxed,
     std::string& error
 ) {
+    audioMuxed = false;
     MediaMuxerApi api;
     if (!api.load(error)) {
         return false;
@@ -238,37 +247,99 @@ bool muxAvcToMp4(
     api.setBuffer(format, "csd-0", sps.data(), sps.size());
     api.setBuffer(format, "csd-1", pps.data(), pps.size());
 
-    auto track = api.addTrack(muxer, format);
+    auto videoTrack = api.addTrack(muxer, format);
     api.deleteFormat(format);
-    if (track < 0 || api.startMuxer(muxer) != AMEDIA_OK) {
+    if (videoTrack < 0) {
         api.deleteMuxer(muxer);
         ::close(fd);
         error = "MediaMuxer no aceptó la pista AVC";
         return false;
     }
 
+    ssize_t audioTrack = -1;
+    if (!audioFrames.empty() && !audioCsd.empty()) {
+        auto* audioFormat = api.newFormat();
+        if (audioFormat) {
+            api.setString(audioFormat, "mime", "audio/mp4a-latm");
+            api.setInt32(audioFormat, "sample-rate", kAudioSampleRate);
+            api.setInt32(audioFormat, "channel-count", kAudioChannelCount);
+            api.setInt32(audioFormat, "bitrate", kAudioBitRate);
+            api.setInt32(audioFormat, "aac-profile", 2);
+            api.setBuffer(audioFormat, "csd-0", audioCsd.data(), audioCsd.size());
+            audioTrack = api.addTrack(muxer, audioFormat);
+            api.deleteFormat(audioFormat);
+        }
+    }
+
+    if (api.startMuxer(muxer) != AMEDIA_OK) {
+        api.deleteMuxer(muxer);
+        ::close(fd);
+        error = "MediaMuxer no pudo iniciar las pistas";
+        return false;
+    }
+
     bool ok = true;
     auto basePts = frames.front().ptsUs;
-    std::int64_t previousPts = -1;
-    for (auto const& frame : frames) {
-        auto pts = std::max<std::int64_t>(frame.ptsUs - basePts, previousPts + 1);
-        previousPts = pts;
+    std::int64_t previousVideoPts = -1;
+    std::int64_t previousAudioPts = -1;
+    std::size_t videoIndex = 0;
+    std::size_t audioIndex = 0;
+
+    while (audioIndex < audioFrames.size() && audioFrames[audioIndex].ptsUs < basePts) {
+        ++audioIndex;
+    }
+
+    while (videoIndex < frames.size() ||
+        (audioTrack >= 0 && audioIndex < audioFrames.size())) {
+        auto videoPts = videoIndex < frames.size()
+            ? frames[videoIndex].ptsUs - basePts
+            : std::numeric_limits<std::int64_t>::max();
+        auto audioPts = audioTrack >= 0 && audioIndex < audioFrames.size()
+            ? audioFrames[audioIndex].ptsUs - basePts
+            : std::numeric_limits<std::int64_t>::max();
+
         AMediaCodecBufferInfo info{};
-        info.offset = 0;
-        info.size = static_cast<std::int32_t>(std::min<std::size_t>(
-            frame.data.size(), static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())
-        ));
-        info.presentationTimeUs = pts;
-        info.flags = frame.keyFrame ? AMEDIACODEC_BUFFER_FLAG_KEY_FRAME : 0;
-        if (api.writeSample(
-                muxer,
-                static_cast<std::size_t>(track),
-                frame.data.data(),
-                &info
-            ) != AMEDIA_OK) {
-            ok = false;
-            error = "MediaMuxer rechazó un frame AVC";
-            break;
+        if (videoPts <= audioPts) {
+            auto const& frame = frames[videoIndex++];
+            info.offset = 0;
+            info.size = static_cast<std::int32_t>(std::min<std::size_t>(
+                frame.data.size(),
+                static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())
+            ));
+            info.presentationTimeUs = std::max<std::int64_t>(videoPts, previousVideoPts + 1);
+            previousVideoPts = info.presentationTimeUs;
+            info.flags = frame.keyFrame ? AMEDIACODEC_BUFFER_FLAG_KEY_FRAME : 0;
+            if (api.writeSample(
+                    muxer,
+                    static_cast<std::size_t>(videoTrack),
+                    frame.data.data(),
+                    &info
+                ) != AMEDIA_OK) {
+                ok = false;
+                error = "MediaMuxer rechazó un frame AVC";
+                break;
+            }
+        } else {
+            auto const& frame = audioFrames[audioIndex++];
+            info.offset = 0;
+            info.size = static_cast<std::int32_t>(std::min<std::size_t>(
+                frame.data.size(),
+                static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max())
+            ));
+            info.presentationTimeUs = std::max<std::int64_t>(audioPts, previousAudioPts + 1);
+            previousAudioPts = info.presentationTimeUs;
+            info.flags = static_cast<std::uint32_t>(frame.flags & ~std::uint32_t{2});
+            if (api.writeSample(
+                    muxer,
+                    static_cast<std::size_t>(audioTrack),
+                    frame.data.data(),
+                    &info
+                ) != AMEDIA_OK) {
+                ok = false;
+                error = "MediaMuxer rechazó un paquete AAC";
+                break;
+            }
+            audioMuxed = true;
         }
     }
 
@@ -364,18 +435,24 @@ void InstantReplay::beginGameplay() {
         m_status.buffering = false;
         m_status.videoSupported = false;
         m_status.audioIncluded = false;
+        m_status.audioBufferedSeconds = 0.0;
+        m_status.audioPacketCount = 0;
         m_status.bufferedSeconds = 0.0;
         m_status.bufferedMiB = 0.0;
         m_status.frameCount = 0;
         m_status.summary = "iniciando encoder H.264 ROOT...";
+        m_status.audioSummary = "iniciando audio...";
+        m_status.audioError.clear();
         m_status.lastError.clear();
     }
     m_stopRequested.store(false, std::memory_order_release);
     m_captureThread = std::thread([this, generation] { captureLoop(generation); });
+    ReplayAudio::get().beginGameplay();
 }
 
 void InstantReplay::endGameplay() {
     m_stopRequested.store(true, std::memory_order_release);
+    ReplayAudio::get().endGameplay();
     std::lock_guard lock(m_mutex);
     if (m_status.starting || m_status.buffering) {
         m_status.summary = "deteniendo capturador...";
@@ -386,6 +463,8 @@ bool InstantReplay::saveLast60Seconds() {
     std::vector<EncodedFrame> snapshot;
     std::vector<std::uint8_t> sps;
     std::vector<std::uint8_t> pps;
+    std::int64_t firstVideoPts = 0;
+    std::int64_t lastVideoPts = 0;
 
     {
         std::lock_guard lock(m_mutex);
@@ -435,6 +514,8 @@ bool InstantReplay::saveLast60Seconds() {
         snapshot.assign(start, m_frames.end());
         sps = m_sps;
         pps = m_pps;
+        firstVideoPts = snapshot.front().ptsUs;
+        lastVideoPts = snapshot.back().ptsUs;
         m_status.saving = true;
         m_status.summary = fmt::format("guardando {} frames...", snapshot.size());
         m_status.lastError.clear();
@@ -443,11 +524,14 @@ bool InstantReplay::saveLast60Seconds() {
     if (m_saveThread.joinable()) {
         m_saveThread.join();
     }
+    auto audio = ReplayAudio::get().snapshot(firstVideoPts, lastVideoPts);
     m_saveThread = std::thread([
         this,
         frames = std::move(snapshot),
         sps = std::move(sps),
-        pps = std::move(pps)
+        pps = std::move(pps),
+        audioFrames = std::move(audio.frames),
+        audioCsd = std::move(audio.codecSpecificData)
     ]() mutable {
         auto saveDir = Mod::get()->getSaveDir() / "replay-work";
         std::error_code filesystemError;
@@ -462,8 +546,18 @@ bool InstantReplay::saveLast60Seconds() {
         auto localOutput = saveDir / mp4Name;
         std::string error;
         bool mp4 = false;
+        bool audioMuxed = false;
 #ifdef GEODE_IS_ANDROID
-        mp4 = muxAvcToMp4(localOutput, frames, sps, pps, error);
+        mp4 = muxAvcToMp4(
+            localOutput,
+            frames,
+            sps,
+            pps,
+            audioFrames,
+            audioCsd,
+            audioMuxed,
+            error
+        );
 #endif
         std::string finalName = mp4Name;
         if (!mp4) {
@@ -505,13 +599,19 @@ bool InstantReplay::saveLast60Seconds() {
             m_status.lastFile = publicPath;
             m_status.lastError.clear();
             m_status.summary = fmt::format(
-                "clip {} guardado{}",
+                "clip {} guardado{}{}",
                 finalName,
-                mp4 ? "" : " (H.264 crudo)"
+                mp4 ? "" : " (H.264 crudo)",
+                audioMuxed ? " con audio AAC" : " sin audio"
             );
+            m_status.audioIncluded = audioMuxed;
         }
         notifyOnMainThread(
-            mp4 ? "Replay guardado en Download" : "Replay H.264 guardado en Download",
+            mp4
+                ? (audioMuxed
+                    ? "Replay con audio guardado en Download"
+                    : "Replay de vídeo guardado; audio no disponible")
+                : "Replay H.264 guardado en Download",
             NotificationIcon::Success
         );
     });
@@ -519,8 +619,15 @@ bool InstantReplay::saveLast60Seconds() {
 }
 
 InstantReplayStatus InstantReplay::status() const {
+    auto audio = ReplayAudio::get().status();
     std::lock_guard lock(m_mutex);
-    return m_status;
+    auto result = m_status;
+    result.audioIncluded = audio.available;
+    result.audioBufferedSeconds = audio.bufferedSeconds;
+    result.audioPacketCount = audio.packetCount;
+    result.audioSummary = audio.summary;
+    result.audioError = audio.lastError;
+    return result;
 }
 
 void InstantReplay::captureLoop(std::uint64_t generation) {
@@ -707,7 +814,7 @@ void InstantReplay::acceptNal(std::vector<std::uint8_t> nal, std::uint64_t gener
         m_status.bufferedMiB = static_cast<double>(m_ringBytes) / (1024.0 * 1024.0);
         if (!m_status.saving) {
             m_status.summary = fmt::format(
-                "buffering {:.1f}/60 s | {:.1f} MiB | sin audio",
+                "buffering {:.1f}/60 s | {:.1f} MiB | vídeo H.264",
                 std::min(60.0, m_status.bufferedSeconds),
                 m_status.bufferedMiB
             );

@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.6",
+  "version": "v0.2.0-beta.7",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -18,6 +18,11 @@
       "version": ">=v1.22.0",
       "required": false
     }
+  },
+  "resources": {
+    "files": [
+      "resources/replay-audio.jar"
+    ]
   },
   "settings": {
     "latency-title": {
@@ -159,6 +164,14 @@
       "description": "Mantiene vídeo H.264 1280x720 codificado por hardware durante PlayLayer. Guardar Clip conserva el tramo anterior; nunca inicia una grabación nueva. Desactivado por defecto mientras se valida esta beta en tu dispositivo.",
       "default": false,
       "platforms": ["android"]
+    },
+    "instant-replay-audio": {
+      "type": "bool",
+      "name": "Audio interno del replay",
+      "description": "Captura USAGE_MEDIA mediante un loopback ROOT temporal y lo codifica como AAC 48 kHz estéreo. Mantiene activo el altavoz o los audífonos y no utiliza MediaProjection.",
+      "default": true,
+      "platforms": ["android"],
+      "enable-if": "instant-replay"
     },
     "console-title": {
       "type": "title",

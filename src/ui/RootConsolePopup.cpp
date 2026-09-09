@@ -152,6 +152,7 @@ void RootConsolePopup::refreshText() {
         "Trim: {}\n"
         "Audio: {} {} Hz DSP {}x{} (~{:.2f} ms), Android {}/{}\n"
         "Replay: {} | {:.1f} s / {:.1f} MiB | audio={}\n"
+        "Replay AAC: {} | {} paquetes | error={}\n"
         "Último clip: {}",
         rootName(root),
         RootExecutor::get().rootUid(),
@@ -201,6 +202,9 @@ void RootConsolePopup::refreshText() {
         replay.bufferedSeconds,
         replay.bufferedMiB,
         replay.audioIncluded ? "sí" : "no",
+        replay.audioSummary,
+        replay.audioPacketCount,
+        replay.audioError.empty() ? "<ninguno>" : replay.audioError,
         replay.lastFile.empty() ? "<ninguno>" : replay.lastFile
     );
     m_text->setText(std::move(text));

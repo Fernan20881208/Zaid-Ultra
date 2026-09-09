@@ -18,10 +18,14 @@ struct InstantReplayStatus final {
     bool saving = false;
     bool videoSupported = false;
     bool audioIncluded = false;
+    double audioBufferedSeconds = 0.0;
+    std::size_t audioPacketCount = 0;
     double bufferedSeconds = 0.0;
     double bufferedMiB = 0.0;
     std::size_t frameCount = 0;
     std::string summary = "desactivado";
+    std::string audioSummary = "audio desactivado";
+    std::string audioError;
     std::string lastFile;
     std::string lastError;
 };

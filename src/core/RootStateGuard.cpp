@@ -5,10 +5,12 @@
 
 #include <Geode/Geode.hpp>
 
+#include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <sstream>
 
 using namespace geode::prelude;
@@ -29,6 +31,16 @@ std::string capturedValue(RootStateGuard::SavedValue const& value) {
         return "<no disponible>";
     }
     return value.wasPresent ? value.value : "<sin valor>";
+}
+
+std::string compactLower(std::string value) {
+    value.erase(std::remove_if(value.begin(), value.end(), [](unsigned char character) {
+        return std::isspace(character) != 0;
+    }), value.end());
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
+        return static_cast<char>(std::tolower(character));
+    });
+    return value;
 }
 
 } // namespace
@@ -97,7 +109,7 @@ void RootStateGuard::begin(RootGuardConfig config) {
             snapshot.headsUp = readSetting("global", "heads_up_notifications_enabled");
         }
         if (config.touchBoost) {
-            snapshot.goodix = readNode(kGoodixReportRate);
+            snapshot.goodix = readGoodixReportRate();
             snapshot.speedTouch = readNode(kSpeedTouch);
         }
 
@@ -126,7 +138,7 @@ void RootStateGuard::begin(RootGuardConfig config) {
             ok &= writeSetting("global", "heads_up_notifications_enabled", snapshot.headsUp, "0");
         }
         if (snapshot.goodix.captured) {
-            ok &= writeNode(kGoodixReportRate, snapshot.goodix, "1");
+            ok &= writeGoodixReportRate(snapshot.goodix, "1");
         }
         if (snapshot.speedTouch.captured) {
             ok &= writeNode(kSpeedTouch, snapshot.speedTouch, "1");
@@ -187,14 +199,14 @@ void RootStateGuard::end() {
 
 void RootStateGuard::refreshReadOnlyStatus() {
     RootExecutor::get().post([this] {
-        auto goodix = readNode(kGoodixReportRate);
+        auto goodix = readGoodixReportRate();
         auto speedTouch = readNode(kSpeedTouch);
         auto minRefresh = readSetting("system", "min_refresh_rate");
         auto peakRefresh = readSetting("system", "peak_refresh_rate");
         auto headsUp = readSetting("global", "heads_up_notifications_enabled");
 
         std::lock_guard lock(m_mutex);
-        m_status.goodix = capturedValue(goodix);
+        m_status.goodix = goodixDisplay(goodix);
         m_status.speedTouch = capturedValue(speedTouch);
         m_status.minRefresh = capturedValue(minRefresh);
         m_status.peakRefresh = capturedValue(peakRefresh);
@@ -265,6 +277,42 @@ RootStateGuard::SavedValue RootStateGuard::readNode(char const* path) {
     return {true, true, value};
 }
 
+RootStateGuard::SavedValue RootStateGuard::readGoodixReportRate() {
+    auto result = RootExecutor::get().runRoot(fmt::format(
+        "if [ -r '{0}' ]; then cat '{0}'; else printf '__missing__'; fi",
+        kGoodixReportRate
+    ));
+    auto raw = trim(result.output);
+    if (!result.ok() || raw == "__missing__") {
+        return {};
+    }
+
+    // Goodix BERLIN 9916R exposes a write-only switch semantic through a
+    // human-readable readback. These are the two values verified on duchamp:
+    // writing 0 reports 240 Hz and writing 1 reports 480 Hz.
+    auto normalized = compactLower(raw);
+    if (normalized == "0" || normalized == "touchreportrate::240hz") {
+        return {true, true, "0"};
+    }
+    if (normalized == "1" || normalized == "touchreportrate::480hz") {
+        return {true, true, "1"};
+    }
+    return {};
+}
+
+std::string RootStateGuard::goodixDisplay(SavedValue const& value) {
+    if (!value.captured) {
+        return "<no disponible>";
+    }
+    if (value.value == "0") {
+        return "240 Hz (0 verificado)";
+    }
+    if (value.value == "1") {
+        return "480 Hz (1 verificado)";
+    }
+    return "<lectura desconocida>";
+}
+
 bool RootStateGuard::writeSetting(
     char const* table,
     char const* key,
@@ -301,10 +349,33 @@ bool RootStateGuard::writeNode(
         return false;
     }
     return RootExecutor::get().runRoot(fmt::format(
-        "if [ -w '{0}' ]; then printf '%s' '{1}' > '{0}'; else exit 20; fi",
+        "if [ -w '{0}' ]; then printf '%s\\n' '{1}' > '{0}'; else exit 20; fi",
         path,
         value
     )).ok();
+}
+
+bool RootStateGuard::writeGoodixReportRate(
+    SavedValue const& original,
+    std::optional<std::string> replacement
+) {
+    if (!original.captured) {
+        return true;
+    }
+    auto value = replacement ? *replacement : original.value;
+    if (value != "0" && value != "1") {
+        return false;
+    }
+    auto write = RootExecutor::get().runRoot(fmt::format(
+        "if [ -w '{0}' ]; then printf '%s\\n' '{1}' > '{0}'; else exit 20; fi",
+        kGoodixReportRate,
+        value
+    ));
+    if (!write.ok()) {
+        return false;
+    }
+    auto verified = readGoodixReportRate();
+    return verified.captured && verified.value == value;
 }
 
 bool RootStateGuard::restoreSnapshot(Snapshot const& snapshot) {
@@ -312,7 +383,7 @@ bool RootStateGuard::restoreSnapshot(Snapshot const& snapshot) {
     ok &= writeSetting("system", "min_refresh_rate", snapshot.minRefresh, std::nullopt);
     ok &= writeSetting("system", "peak_refresh_rate", snapshot.peakRefresh, std::nullopt);
     ok &= writeSetting("global", "heads_up_notifications_enabled", snapshot.headsUp, std::nullopt);
-    ok &= writeNode(kGoodixReportRate, snapshot.goodix, std::nullopt);
+    ok &= writeGoodixReportRate(snapshot.goodix, std::nullopt);
     ok &= writeNode(kSpeedTouch, snapshot.speedTouch, std::nullopt);
     return ok;
 }
@@ -390,11 +461,13 @@ void RootStateGuard::removeRecoveryFile() {
 }
 
 void RootStateGuard::updateStatusFromSnapshot(Snapshot const& snapshot, bool active, std::string action) {
+    auto currentGoodix = readGoodixReportRate();
+    auto currentSpeedTouch = readNode(kSpeedTouch);
     std::lock_guard lock(m_mutex);
     m_status.active = active;
     m_status.recoveryPending = std::filesystem::exists(recoveryPath());
-    m_status.goodix = snapshot.goodix.captured ? (active ? "1 (perfil)" : capturedValue(snapshot.goodix)) : "<no disponible>";
-    m_status.speedTouch = snapshot.speedTouch.captured ? (active ? "1 (perfil)" : capturedValue(snapshot.speedTouch)) : "<no disponible>";
+    m_status.goodix = goodixDisplay(currentGoodix);
+    m_status.speedTouch = capturedValue(currentSpeedTouch);
     m_status.minRefresh = snapshot.minRefresh.captured ? (active ? "120.0 (perfil)" : capturedValue(snapshot.minRefresh)) : "<no disponible>";
     m_status.peakRefresh = snapshot.peakRefresh.captured ? (active ? "120.0 (perfil)" : capturedValue(snapshot.peakRefresh)) : "<no disponible>";
     m_status.headsUp = snapshot.headsUp.captured ? (active ? "0 (perfil)" : capturedValue(snapshot.headsUp)) : "<no disponible>";

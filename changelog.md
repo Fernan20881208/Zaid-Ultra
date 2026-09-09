@@ -1,3 +1,16 @@
+# v0.2.0-beta.7
+
+- Fixed Goodix BERLIN report-rate detection: the verified human-readable
+  `touch report rate::240HZ/480HZ` readback is now mapped to the node's exact
+  `0/1` write semantics. The 480 Hz request is read back and verified.
+- Added an isolated ROOT `app_process` audio helper for Instant Replay. It uses
+  a temporary `USAGE_MEDIA` AudioPolicy `LOOP_BACK_RENDER` mix, keeps local
+  playback enabled, hardware-encodes AAC-LC at 48 kHz stereo / 192 kbps, and
+  sends timestamped packets to the bounded replay ring.
+- MP4 saving now interleaves timestamped AVC and AAC packets. If the ROM rejects
+  the audio route, video replay remains available and the safe console displays
+  the helper's error instead of failing the whole capture.
+
 # v0.2.0-beta.6
 
 - Fixed Save Clip rejecting a valid encoded replay after PlayLayer exited.

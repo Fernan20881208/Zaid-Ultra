@@ -14,6 +14,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build ROOT replay audio helper
+        run: bash tools/build-replay-audio-helper.sh
+
       - name: Build Zaid-Ultra
         id: build
         uses: geode-sdk/build-geode-mod@main

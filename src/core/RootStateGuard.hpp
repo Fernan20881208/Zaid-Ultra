@@ -63,8 +63,11 @@ private:
     static bool safeSwitch(std::string const& value);
     static SavedValue readSetting(char const* table, char const* key);
     static SavedValue readNode(char const* path);
+    static SavedValue readGoodixReportRate();
+    static std::string goodixDisplay(SavedValue const& value);
     static bool writeSetting(char const* table, char const* key, SavedValue const& original, std::optional<std::string> replacement);
     static bool writeNode(char const* path, SavedValue const& original, std::optional<std::string> replacement);
+    static bool writeGoodixReportRate(SavedValue const& original, std::optional<std::string> replacement);
     static bool restoreSnapshot(Snapshot const& snapshot);
 
     static bool saveRecoveryFile(Snapshot const& snapshot);

@@ -113,7 +113,14 @@ for the PlayLayer lifetime. The screenrecord PID is written to one fixed file
 and is signalled only after `/proc/<pid>/comm` verifies the exact process name;
 there is no broad `pkill`.
 
-Audio remains excluded from this beta. Although Remote Submix is present, raw
-screenrecord contains no audio or timestamps. A later privileged helper must
-emit encoded audio/video packet boundaries and presentation timestamps before
-the mod can mux synchronized game audio without MediaProjection.
+Raw `screenrecord` contains no audio, so audio is kept in a separate reversible
+module. A small dex helper runs only for the PlayLayer lifetime through ROOT
+`app_process`. On Android 13+ it registers an AudioPolicy mix matching
+`USAGE_MEDIA` with `ROUTE_FLAG_LOOP_BACK_RENDER`, which loops playback into an
+AudioRecord while retaining the normal device output. PCM is hardware-encoded
+to AAC-LC at 48 kHz stereo / 192 kbps. Each packet carries a monotonic
+AudioRecord/MediaCodec PTS over a framed pipe; the native ring retains at most
+72 seconds or 4 MiB and MediaMuxer interleaves it with AVC relative to the
+selected video keyframe. No MediaProjection token or persistent audio setting
+is used. If the hidden OEM AudioPolicy path is incompatible, the helper exits,
+its error is shown in the console, and replay continues safely as video-only.
