@@ -1,3 +1,17 @@
+# v0.2.0-beta.10
+
+- Añade el nuevo logo Zaid como icono oficial del mod y como botón flotante
+  ligero del controlador de replay.
+- Convierte los dos nodos ya verificados del dispositivo en un modo táctil
+  global forzoso: escribe exactamente `1` en Goodix y `speed_touch_enable`,
+  comprueba la lectura y vuelve a aplicarlos si cambian durante el juego.
+- Mantiene 480 Hz entre niveles, sin depender de un perfil ni de una opción
+  desactivable. El valor original queda guardado antes de escribir y se
+  restaura al cerrar normalmente, con recuperación en el siguiente arranque
+  si el proceso termina de forma inesperada.
+- La consola segura muestra el resultado verificado y su botón Restaurar puede
+  devolver el estado previo hasta que se reinicie el juego.
+
 # v0.2.0-beta.9
 
 - Añade un botón ZU flotante y arrastrable dentro de PlayLayer. Un toque abre

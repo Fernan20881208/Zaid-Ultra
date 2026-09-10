@@ -59,8 +59,6 @@ GameplayProfile ProfileManager::resolve(GJGameLevel* level) {
 
     profile.request120Hz = !profile.monitorOnly &&
         (settings::enabled("dynamic-120hz") || profile.ultra);
-    profile.touchBoost = !profile.monitorOnly &&
-        (settings::enabled("root-touch-boost") || profile.ultra);
     profile.suppressHeadsUp = !profile.monitorOnly &&
         (settings::enabled("notification-guard") || profile.ultra);
     profile.memoryTrim = !profile.monitorOnly &&

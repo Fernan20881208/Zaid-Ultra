@@ -2,7 +2,6 @@
 
 #include <Geode/Geode.hpp>
 
-class ButtonSprite;
 class CCMenuItemSpriteExtra;
 
 namespace zaid::ultra {
@@ -34,7 +33,7 @@ private:
     void refreshState();
     void notifyFailure(char const* fallback);
 
-    ButtonSprite* m_toggleVisual = nullptr;
+    cocos2d::CCNode* m_toggleVisual = nullptr;
     cocos2d::CCLabelBMFont* m_stateLabel = nullptr;
     cocos2d::CCLabelBMFont* m_panelTitle = nullptr;
     cocos2d::CCLayerColor* m_panelBackground = nullptr;

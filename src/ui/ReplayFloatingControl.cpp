@@ -119,8 +119,17 @@ bool ReplayFloatingControl::init() {
     m_actionMenu->addChild(m_finishButton);
     m_actionMenu->addChild(m_clipButton);
 
-    m_toggleVisual = ButtonSprite::create("ZU", "bigFont.fnt", "GJ_button_05.png", 0.72f);
-    m_toggleVisual->setScale(0.58f);
+    auto logoPath = Mod::get()->getResourcesDir() / "replay-button.png";
+    m_toggleVisual = CCSprite::create(logoPath.string().c_str());
+    if (m_toggleVisual) {
+        auto logoSize = m_toggleVisual->getContentSize();
+        auto longestSide = std::max(logoSize.width, logoSize.height);
+        m_toggleVisual->setScale(longestSide > 0.0f ? 47.0f / longestSide : 1.0f);
+    } else {
+        auto* fallback = ButtonSprite::create("ZU", "bigFont.fnt", "GJ_button_05.png", 0.72f);
+        fallback->setScale(0.58f);
+        m_toggleVisual = fallback;
+    }
     m_toggleVisual->setID("zaid-ultra-floating-button");
     this->addChild(m_toggleVisual, 4);
 
@@ -246,7 +255,7 @@ void ReplayFloatingControl::setFloatingPosition(CCPoint position) {
         m_toggleVisual->setPosition(position);
     }
     if (m_stateLabel) {
-        m_stateLabel->setPosition({position.x, position.y - 19.0f});
+        m_stateLabel->setPosition({position.x, position.y - 27.0f});
     }
 
     auto opensLeft = position.x >= size.width * 0.5f;

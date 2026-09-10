@@ -2,13 +2,16 @@
 #include <Geode/modify/CCScheduler.hpp>
 #include <Geode/modify/EndLevelLayer.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
+#include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
+#include <Geode/loader/GameEvent.hpp>
 #include <Geode/ui/Notification.hpp>
 
 #include "core/SessionManager.hpp"
 #include "core/Settings.hpp"
+#include "modules/ForcedTouchBoost.hpp"
 #include "modules/InstantReplay.hpp"
 #include "modules/TelemetryManager.hpp"
 #include "ui/ReplayFloatingControl.hpp"
@@ -134,8 +137,31 @@ void ensureAndroidInputListener() {
 
 class $modify(ZaidUltraScheduler, CCScheduler) {
     void update(float dt) {
+        zaid::ultra::ForcedTouchBoost::get().tick(dt);
         zaid::ultra::TelemetryManager::get().onFrame();
         CCScheduler::update(dt);
+    }
+};
+
+$on_mod(Loaded) {
+    // No ROOT work happens while Geode is loading. This listener only queues
+    // exact restoration if the game later emits its normal exit event.
+    GameEvent(GameEventType::Exiting).listen([] {
+        zaid::ultra::ForcedTouchBoost::get().restoreForExit();
+        return ListenerResult::Propagate;
+    }).leak();
+}
+
+class $modify(ZaidUltraMenuLayer, MenuLayer) {
+    bool init() {
+        if (!MenuLayer::init()) {
+            return false;
+        }
+        // MenuLayer exists only after Geode has finished loading mods. Start
+        // the serialized worker here so 480 Hz is active throughout the game
+        // without returning ROOT/JNI work to the fragile load phase.
+        zaid::ultra::SessionManager::get().prime();
+        return true;
     }
 };
 

@@ -5,6 +5,7 @@
 #include "../core/RootStateGuard.hpp"
 #include "../core/SessionManager.hpp"
 #include "../modules/AudioLatency.hpp"
+#include "../modules/ForcedTouchBoost.hpp"
 #include "../modules/InstantReplay.hpp"
 #include "../modules/MemoryTrim.hpp"
 #include "../modules/TelemetryManager.hpp"
@@ -124,6 +125,7 @@ void RootConsolePopup::refreshText() {
     auto telemetry = TelemetryManager::get().snapshot();
     auto memory = MemoryTrim::get().status();
     auto audio = AudioLatency::get().status();
+    auto forcedTouch = ForcedTouchBoost::get().status();
     auto replay = InstantReplay::get().status();
     auto cbfLoaded = Loader::get()->getLoadedMod("syzzi.click_between_frames") != nullptr ||
         Loader::get()->getLoadedMod("zmx.cbf-lite") != nullptr;
@@ -140,7 +142,7 @@ void RootConsolePopup::refreshText() {
         "ROOT: {} | su id -u={} | UID/PID={}/{}\n"
         "Proceso: {}\n"
         "Sesión: {} | gameplay tid={}\n"
-        "Goodix={} | speed_touch={}\n"
+        "Goodix={} | speed_touch={} | forzoso={}\n"
         "Pantalla={:.1f} Hz (solicitud={:.0f}, modos={})\n"
         "ROOT refresh min={} peak={} | heads-up={}\n"
         "CPU {:.0f}/{:.0f} MHz {:.1f}C | GPU {:.0f}/{:.0f} MHz {:.1f}C\n"
@@ -161,8 +163,9 @@ void RootConsolePopup::refreshText() {
         processName(),
         SessionManager::get().statusLine(),
         thread.threadId,
-        rootState.goodix,
-        rootState.speedTouch,
+        forcedTouch.goodix,
+        forcedTouch.speedTouch,
+        forcedTouch.verified ? "sí" : "no",
         display.currentRefreshHz,
         display.requestedRefreshHz,
         display.supportedModes,
@@ -231,7 +234,8 @@ void RootConsolePopup::onTrim(CCObject*) {
 
 void RootConsolePopup::onRestore(CCObject*) {
     SessionManager::get().end();
-    Notification::create("Restaurado; reentra al nivel para reactivar", NotificationIcon::Success)->show();
+    ForcedTouchBoost::get().restoreUntilRestart();
+    Notification::create("Restaurado hasta reiniciar el juego", NotificationIcon::Success)->show();
 }
 
 void RootConsolePopup::onSaveReplay(CCObject*) {

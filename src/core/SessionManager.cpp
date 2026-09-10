@@ -5,6 +5,7 @@
 #include "RootStateGuard.hpp"
 #include "Settings.hpp"
 #include "../modules/AudioLatency.hpp"
+#include "../modules/ForcedTouchBoost.hpp"
 #include "../modules/InstantReplay.hpp"
 #include "../modules/MemoryTrim.hpp"
 #include "../modules/TelemetryManager.hpp"
@@ -23,14 +24,17 @@ SessionManager& SessionManager::get() {
 
 void SessionManager::prime() {
     std::call_once(m_primeOnce, [] {
-        // None of this runs while Geode is still loading mods. It is delayed
-        // until the first PlayLayer preparation, when the Android activity,
-        // save directory and runtime threads are all established.
+        // None of this runs while Geode is still loading mods. MenuLayer
+        // starts it once the game is ready; PlayLayer::prepare remains a
+        // fallback for launch flows that bypass the normal main menu.
         LatencyManager::get().prime();
         RootExecutor::get().start();
         // Recovery is deliberately queued first: no new persistent value may
         // be changed until an interrupted session has been restored.
         RootStateGuard::get().recoverIfNeeded();
+        // The two device-validated touch switches are mandatory and owned for
+        // the whole game lifetime, independently from per-level profiles.
+        ForcedTouchBoost::get().start();
         RootExecutor::get().probe();
         RootStateGuard::get().refreshReadOnlyStatus();
         AudioLatency::get().refreshDiagnostics();
@@ -75,7 +79,9 @@ void SessionManager::begin() {
     }
 
     RootGuardConfig rootConfig;
-    rootConfig.touchBoost = profile.touchBoost;
+    // ForcedTouchBoost owns these nodes globally. Keeping them out of the
+    // PlayLayer guard prevents a level exit from restoring 240 Hz.
+    rootConfig.touchBoost = false;
     rootConfig.refreshRate = profile.request120Hz && settings::enabled("refresh-root-fallback");
     rootConfig.suppressHeadsUp = profile.suppressHeadsUp;
     if (rootConfig.touchBoost || rootConfig.refreshRate || rootConfig.suppressHeadsUp) {

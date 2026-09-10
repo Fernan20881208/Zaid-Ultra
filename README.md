@@ -11,15 +11,19 @@ and gameplay responsiveness.
 
 ## v0.2 modular backend
 
-Zaid-Ultra applies a gameplay profile only while `PlayLayer` exists and keeps
-persistent ROOT writes behind one serialized, crash-recoverable state guard.
+Zaid-Ultra applies reversible gameplay profiles while `PlayLayer` exists. Once
+the main menu proves the game has finished loading, the two device-validated
+touch switches are kept enabled for the rest of the game, while every ROOT
+write stays serialized and recoverable.
 
 ### Implemented in the v0.2 beta
 
 - Dynamic 120 Hz request through the Android window plus an optional AOSP
   `min_refresh_rate` / `peak_refresh_rate` ROOT fallback.
-- Exact snapshots and restoration for refresh settings, notification heads-up,
-  Goodix report mode and `speed_touch_enable`, including next-launch recovery.
+- Exact snapshots and restoration for refresh settings and notification
+  heads-up. The allow-listed Goodix report mode and `speed_touch_enable` are
+  forcibly set to `1`, verified every 15 seconds, kept across level exits, and
+  restored on a normal game exit or at the next launch after a crash.
 - Own-process `malloc_trim` with RSS/timing measurement and automatic disabling
   when it provides no measurable benefit.
 - Android audio-route diagnostics. Direct FMOD tuning is temporarily disabled
@@ -31,7 +35,7 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
   detection, FPS, frametime, display refresh and optional in-level overlay.
 - Safe Geode console on pause/end screens with fixed diagnostic actions only.
 - Opt-in ROOT Instant Replay beta using the device-validated raw-H.264
-  `screenrecord` stream: a draggable in-level ZU button controls recording,
+  `screenrecord` stream: a draggable in-level Zaid logo controls recording,
   pause/resume, finalization and retroactive Clip 60s saving. Automatic start
   is optional and disabled by default, so capture overhead is user-controlled.
   The bounded encoded ring keeps recent gameplay and Clip 60s saves existing

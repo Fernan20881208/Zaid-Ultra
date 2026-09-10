@@ -5,7 +5,7 @@
   },
   "id": "zaid.ultra",
   "name": "Zaid-Ultra",
-  "version": "v0.2.0-beta.9",
+  "version": "v0.2.0-beta.10",
   "developer": "Zaid Navarro",
   "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
   "tags": [
@@ -21,20 +21,14 @@
   },
   "resources": {
     "files": [
-      "resources/replay-audio.jar"
+      "resources/replay-audio.jar",
+      "resources/replay-button.png"
     ]
   },
   "settings": {
     "latency-title": {
       "type": "title",
-      "name": "Latencia Android"
-    },
-    "root-touch-boost": {
-      "type": "bool",
-      "name": "Boost táctil ROOT",
-      "description": "Activa el modo de alta frecuencia del Goodix y speed_touch cuando el kernel los expone. En tu duchamp esto cambia 240 Hz a 480 Hz.",
-      "default": true,
-      "platforms": ["android"]
+      "name": "Latencia Android · Touch 480 Hz forzoso"
     },
     "native-subframe-input": {
       "type": "bool",
@@ -161,14 +155,14 @@
     "instant-replay": {
       "type": "bool",
       "name": "Búfer retroactivo de 60 s",
-      "description": "Permite controlar un búfer H.264/AAC de hasta 60 s desde el botón ZU flotante. Guardar Clip conserva el tramo anterior sin reiniciar la grabación.",
+      "description": "Permite controlar un búfer H.264/AAC de hasta 60 s desde el botón flotante con el logo Zaid. Guardar Clip conserva el tramo anterior sin reiniciar la grabación.",
       "default": false,
       "platforms": ["android"]
     },
     "replay-floating-control": {
       "type": "bool",
-      "name": "Botón ZU flotante",
-      "description": "Muestra durante el nivel un botón ZU arrastrable con Grabar, Pausar/Seguir, Finalizar y Clip 60s. Solo captura sus propios toques y no consume la entrada de gameplay fuera del botón.",
+      "name": "Botón Zaid flotante",
+      "description": "Muestra durante el nivel el logo Zaid arrastrable con Grabar, Pausar/Seguir, Finalizar y Clip 60s. Solo captura sus propios toques y no consume la entrada de gameplay fuera del botón.",
       "default": true,
       "platforms": ["android"],
       "enable-if": "instant-replay"

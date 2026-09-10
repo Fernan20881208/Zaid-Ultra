@@ -14,7 +14,6 @@ struct GameplayProfile final {
     bool ultra = false;
     bool monitorOnly = false;
     bool request120Hz = false;
-    bool touchBoost = false;
     bool suppressHeadsUp = false;
     bool memoryTrim = false;
     bool thermalMonitor = false;

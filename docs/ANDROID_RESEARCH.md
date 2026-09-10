@@ -6,24 +6,29 @@ not do. The target is Geometry Dash 2.2081, Geode 5.10.1 and Android64.
 ## Reversible state model
 
 Persistent/global values are never written before their previous state is
-captured and saved to `root-state-v1.txt` in the mod save directory. The ROOT
-worker is serialized, so an exit restore cannot overtake an enter operation.
-If the process dies during gameplay, the next launch restores the saved values
-before accepting a new profile.
+captured in the mod save directory. The per-level guard uses
+`root-state-v1.txt`; the game-lifetime touch owner uses the separate
+`forced-touch-state-v1.txt`. The ROOT worker is serialized, so an exit restore
+cannot overtake an enter operation. If the process dies during gameplay, the
+next launch restores a saved value before applying a new one.
 
 | Feature | Interface | Restore rule |
 | --- | --- | --- |
 | Window refresh | `WindowManager.LayoutParams.preferredDisplayModeId` and `preferredRefreshRate` | Restore both prior fields before `PlayLayer::onExit` completes |
 | ROOT refresh fallback | AOSP settings `system min_refresh_rate` and `peak_refresh_rate` | Put the exact old value, or delete the key if it was absent |
 | Heads-up guard | AOSP setting `global heads_up_notifications_enabled` | Put/delete its exact old state; never alter DND or per-app permissions |
-| Goodix boost | `/sys/devices/platform/goodix_ts.0/switch_report_rate` | Only values `0`/`1`; exact old value restored |
-| MediaTek touch boost | `/sys/module/metis/parameters/speed_touch_enable` | Only boolean switch values; exact old value restored |
+| Goodix boost | `/sys/devices/platform/goodix_ts.0/switch_report_rate` | Force `1` after the main menu loads, verify every 15 s, keep between levels; restore exact `0`/`1` value on game exit |
+| MediaTek touch boost | `/sys/module/metis/parameters/speed_touch_enable` | Force `1` on the same lifecycle; restore its exact prior boolean value on game exit |
 | Thread scheduling | `PR_SET_TIMERSLACK`, `setpriority` / `renice` | Restore captured timer slack and nice value; never use realtime policy |
 
 The two touch nodes are OEM interfaces without a stable public ABI. They are
 allow-listed solely because their semantics were measured on the target
-duchamp/Goodix BERLIN 9916R device. No wildcard discovery or speculative sysfs
-writes are permitted.
+duchamp/Goodix BERLIN 9916R device: Goodix `0` reads as 240 Hz, Goodix `1`
+reads as 480 Hz, and `speed_touch_enable=1` is accepted. The mandatory action
+still checks that both exact paths are readable and writable, snapshots both
+values, writes only `1`, and validates semantic readback. No wildcard discovery
+or speculative sysfs writes are permitted. A read-only verification runs every
+15 seconds; a write is repeated only if either value drifted.
 
 ## Refresh rate
 
