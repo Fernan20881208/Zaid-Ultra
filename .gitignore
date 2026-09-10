@@ -1,0 +1,8 @@
+build/
+build-*/
+resources/replay-audio.jar
+.geode/
+.vscode/
+.idea/
+.DS_Store
+*.log

@@ -1,5 +1,73 @@
 # Zaid-Ultra
 
-All-in-one Geometry Dash / Geode suite focused on performance diagnostics, adaptive detail, gameplay intelligence, and reactive icon visuals.
+All-in-one Geometry Dash / Geode suite focused on performance, input latency
+and gameplay responsiveness.
 
-Development target: Geometry Dash 2.2081 + Geode 5.10.1.
+## Current target
+
+- Geometry Dash: **2.2081**
+- Geode: **5.10.1**
+- First build target: **Android64**
+
+## v0.2 modular backend
+
+Zaid-Ultra applies reversible gameplay profiles while `PlayLayer` exists. Once
+the main menu proves the game has finished loading, the two device-validated
+touch switches are kept enabled for the rest of the game, while every ROOT
+write stays serialized and recoverable.
+
+### Implemented in the v0.2 beta
+
+- Dynamic 120 Hz request through the Android window plus an optional AOSP
+  `min_refresh_rate` / `peak_refresh_rate` ROOT fallback.
+- Exact snapshots and restoration for refresh settings and notification
+  heads-up. The allow-listed Goodix report mode and `speed_touch_enable` are
+  forcibly set to `1`, verified every 15 seconds, kept across level exits, and
+  restored on a normal game exit or at the next launch after a crash.
+- Own-process `malloc_trim` with RSS/timing measurement and automatic disabling
+  when it provides no measurable benefit.
+- Android audio-route diagnostics. Direct FMOD tuning is temporarily disabled
+  in beta.3 while its Android load-time ABI path is validated.
+- Raw Android MotionEvent timestamp metrics that always propagate to CBF:
+  delivery rate, jitter, dispatch age and time to an observed physics boundary.
+- Automatic Extreme Demon profile plus manual `ID:ultra` / `ID:monitor` rules.
+- Read-only CPU/GPU/battery thermal and frequency monitoring, thermal-pressure
+  detection, FPS, frametime, display refresh and optional in-level overlay.
+- Safe Geode console on pause/end screens with fixed diagnostic actions only.
+- Opt-in ROOT Instant Replay beta using the device-validated raw-H.264
+  `screenrecord` stream: a draggable in-level Zaid logo controls recording,
+  pause/resume, finalization and retroactive Clip 60s saving. Automatic start
+  is optional and disabled by default, so capture overhead is user-controlled.
+  The bounded encoded ring keeps recent gameplay and Clip 60s saves existing
+  frames without restarting or stopping an active capture.
+  The frozen ring remains saveable after PlayLayer exits into the end-level
+  menu.
+  A separate ROOT AudioPolicy helper captures `USAGE_GAME`, `USAGE_MEDIA` and
+  `USAGE_UNKNOWN` only from the Geometry Dash/Geode UID with
+  `LOOP_BACK_RENDER`, keeps local playback active, verifies the PCM signal,
+  and supplies timestamped AAC-LC packets at 48 kHz stereo. Android MediaMuxer
+  produces the final A/V MP4 when accepted, with video-only and raw-H.264
+  diagnostic fallbacks.
+
+### duchamp validation
+
+On the tested Xiaomi/POCO `duchamp` device with Goodix BERLIN 9916R:
+
+- Normal report mode: **240 Hz**
+- High report mode: **480 Hz**
+- Measured moving-touch reports: approximately **474-476 Hz effective**
+
+The mod deliberately does **not** disable thermal protection, force
+realtime/FIFO scheduling, kill other processes, modify CPU/GPU governors,
+overclock/undervolt, or write unknown touch-driver nodes.
+
+Detailed semantics and safety boundaries are recorded in
+[`docs/ANDROID_RESEARCH.md`](docs/ANDROID_RESEARCH.md).
+
+## Build
+
+```sh
+geode build -p android64
+```
+
+GitHub Actions also builds the Android64 `.geode` artifact automatically.

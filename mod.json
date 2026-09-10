@@ -1,0 +1,215 @@
+{
+  "geode": "5.10.1",
+  "gd": {
+    "android": "2.2081"
+  },
+  "id": "zaid.ultra",
+  "name": "Zaid-Ultra",
+  "version": "v0.2.0-beta.10",
+  "developer": "Zaid Navarro",
+  "description": "Android low-latency suite for Geometry Dash / Geode with root touch tuning, sub-frame input and render-latency controls.",
+  "tags": [
+    "performance",
+    "gameplay",
+    "enhancement"
+  ],
+  "dependencies": {
+    "geode.node-ids": {
+      "version": ">=v1.22.0",
+      "required": false
+    }
+  },
+  "resources": {
+    "files": [
+      "resources/replay-audio.jar",
+      "resources/replay-button.png"
+    ]
+  },
+  "settings": {
+    "latency-title": {
+      "type": "title",
+      "name": "Latencia Android · Touch 480 Hz forzoso"
+    },
+    "native-subframe-input": {
+      "type": "bool",
+      "name": "Input sub-frame nativo",
+      "description": "Activa Click Between Steps de Geometry Dash 2.2 para aprovechar mejor timestamps de entrada entre frames. Si CBF o CBF Lite están cargados, Zaid-Ultra no interfiere con ellos.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "game-thread-priority": {
+      "type": "bool",
+      "name": "Prioridad del hilo de juego",
+      "description": "Intenta aumentar la prioridad del hilo principal de gameplay. Si Android no lo permite directamente, usa ROOT como respaldo.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "minimum-timer-slack": {
+      "type": "bool",
+      "name": "Timer slack mínimo",
+      "description": "Reduce el margen de temporizadores del hilo de juego para disminuir retrasos de scheduling. Puede aumentar ligeramente el consumo.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "display-title": {
+      "type": "title",
+      "name": "Pantalla"
+    },
+    "dynamic-120hz": {
+      "type": "bool",
+      "name": "Dynamic 120 Hz Lock",
+      "description": "Solicita 120 Hz solamente durante PlayLayer y restaura los valores anteriores al salir. El monitor registra si HyperOS entrega 60/90 Hz.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "refresh-root-fallback": {
+      "type": "bool",
+      "name": "Respaldo ROOT para 120 Hz",
+      "description": "Además de la preferencia por ventana, usa únicamente los ajustes AOSP min_refresh_rate y peak_refresh_rate. Se guarda y restaura exactamente su estado anterior, incluso tras reiniciar el juego.",
+      "default": true,
+      "platforms": ["android"],
+      "enable-if": "dynamic-120hz"
+    },
+    "interruptions-title": {
+      "type": "title",
+      "name": "Interrupciones"
+    },
+    "notification-guard": {
+      "type": "bool",
+      "name": "Bloquear heads-up durante nivel",
+      "description": "Desactiva temporalmente las notificaciones flotantes mediante el ajuste AOSP correspondiente y restaura exactamente el valor previo. No cambia DND ni permisos de otras apps.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "memory-title": {
+      "type": "title",
+      "name": "Memoria"
+    },
+    "prudent-memory-trim": {
+      "type": "bool",
+      "name": "Memory Trim prudente",
+      "description": "Libera solamente páginas ya libres del propio proceso antes del nivel y mide RSS antes/después. Si no recupera memoria medible, deja de repetirlo durante la sesión.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "audio-title": {
+      "type": "title",
+      "name": "Audio"
+    },
+    "audio-buffer-mode": {
+      "type": "string",
+      "name": "Buffer FMOD",
+      "description": "La beta de arranque seguro solo lee sample-rate y frames-per-buffer de Android. Los cambios directos de FMOD están temporalmente omitidos mientras se valida una integración ABI segura.",
+      "one-of": ["Original", "Auto seguro", "256 x 4 experimental"],
+      "default": "Original",
+      "requires-restart": true,
+      "platforms": ["android"]
+    },
+    "profiles-title": {
+      "type": "title",
+      "name": "Perfiles de nivel"
+    },
+    "extreme-demon-profile": {
+      "type": "bool",
+      "name": "Perfil Extreme Demon",
+      "description": "Detecta m_demonDifficulty=ExtremeDemon y activa el perfil seguro de latencia/monitorización para ese nivel.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "manual-level-profiles": {
+      "type": "string",
+      "name": "Perfiles manuales",
+      "description": "Lista opcional: ID:ultra o ID:monitor, separada por comas. Ejemplo: 12345:ultra,67890:monitor.",
+      "default": "",
+      "platforms": ["android"]
+    },
+    "monitor-title": {
+      "type": "title",
+      "name": "Monitor"
+    },
+    "thermal-monitor": {
+      "type": "bool",
+      "name": "Monitor térmico",
+      "description": "Lee temperaturas, frecuencias CPU/GPU y presión térmica sin modificar protecciones ni gobernadores.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "telemetry-overlay": {
+      "type": "bool",
+      "name": "Overlay de telemetría",
+      "description": "Muestra FPS, frametime, refresh real, entrega táctil, temperatura y throttling dentro del nivel.",
+      "default": false,
+      "platforms": ["android"]
+    },
+    "cbf-hardware-metrics": {
+      "type": "bool",
+      "name": "Métricas CBF / hardware",
+      "description": "Mide timestamp del MotionEvent, edad de entrega, jitter y tiempo hasta el siguiente límite de física. Solo observa: no altera CBF ni la física.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "replay-title": {
+      "type": "title",
+      "name": "Instant Replay ROOT"
+    },
+    "instant-replay": {
+      "type": "bool",
+      "name": "Búfer retroactivo de 60 s",
+      "description": "Permite controlar un búfer H.264/AAC de hasta 60 s desde el botón flotante con el logo Zaid. Guardar Clip conserva el tramo anterior sin reiniciar la grabación.",
+      "default": false,
+      "platforms": ["android"]
+    },
+    "replay-floating-control": {
+      "type": "bool",
+      "name": "Botón Zaid flotante",
+      "description": "Muestra durante el nivel el logo Zaid arrastrable con Grabar, Pausar/Seguir, Finalizar y Clip 60s. Solo captura sus propios toques y no consume la entrada de gameplay fuera del botón.",
+      "default": true,
+      "platforms": ["android"],
+      "enable-if": "instant-replay"
+    },
+    "instant-replay-auto-start": {
+      "type": "bool",
+      "name": "Grabar automáticamente al entrar",
+      "description": "Inicia el búfer al entrar a PlayLayer. Déjalo apagado para decidir manualmente cuándo grabar desde el botón ZU.",
+      "default": false,
+      "platforms": ["android"],
+      "enable-if": "instant-replay"
+    },
+    "instant-replay-audio": {
+      "type": "bool",
+      "name": "Audio interno del replay",
+      "description": "Captura por UID las rutas Android permitidas para juegos (USAGE_GAME, MEDIA y UNKNOWN) mediante un loopback ROOT temporal, y verifica el nivel PCM antes de codificar AAC 48 kHz estéreo. Mantiene activo el altavoz o los audífonos.",
+      "default": true,
+      "platforms": ["android"],
+      "enable-if": "instant-replay"
+    },
+    "console-title": {
+      "type": "title",
+      "name": "Consola segura"
+    },
+    "pause-console-button": {
+      "type": "bool",
+      "name": "Botón ZU en pausa/final",
+      "description": "Añade acceso a la consola de diagnóstico y a las acciones seguras predefinidas.",
+      "default": true,
+      "platforms": ["android"]
+    },
+    "experimental-no-vsync": {
+      "type": "bool",
+      "name": "No-VSync experimental",
+      "description": "Solicita swap interval 0 a EGL. Puede reducir latencia de render, pero también causar tearing o peor frame pacing. Déjalo apagado si notas inestabilidad.",
+      "default": false,
+      "platforms": ["android"]
+    },
+    "diagnostic-logs": {
+      "type": "bool",
+      "name": "Logs de diagnóstico",
+      "description": "Registra el report rate táctil, speed_touch y resultados de los ajustes de latencia en el log de Geode.",
+      "default": true,
+      "platforms": ["android"]
+    }
+  },
+  "links": {
+    "source": "https://github.com/Fernan20881208/Zaid-Ultra"
+  }
+}
