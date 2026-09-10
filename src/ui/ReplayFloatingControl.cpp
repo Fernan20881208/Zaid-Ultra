@@ -152,7 +152,7 @@ bool ReplayFloatingControl::init() {
 }
 
 void ReplayFloatingControl::registerWithTouchDispatcher() {
-    CCTouchDispatcher::sharedDispatcher()->addTargetedDelegate(this, -1000, true);
+    CCDirector::sharedDirector()->getTouchDispatcher()->addTargetedDelegate(this, -1000, true);
 }
 
 bool ReplayFloatingControl::ccTouchBegan(CCTouch* touch, CCEvent*) {
