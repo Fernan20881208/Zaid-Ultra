@@ -117,13 +117,24 @@ ReplayAudio::~ReplayAudio() {
     }
 }
 
-void ReplayAudio::beginGameplay() {
+void ReplayAudio::beginGameplay(bool preserveExisting, std::int64_t ptsOffsetUs) {
     auto enabled = settings::enabled("instant-replay") &&
         settings::enabled("instant-replay-audio");
     {
         std::lock_guard lock(m_mutex);
         m_status.enabled = enabled;
         if (!enabled) {
+            if (!preserveExisting) {
+                m_frames.clear();
+                m_codecSpecificData.clear();
+                m_ringBytes = 0;
+                m_status.available = false;
+                m_status.bufferedSeconds = 0.0;
+                m_status.bufferedMiB = 0.0;
+                m_status.packetCount = 0;
+            }
+            m_status.starting = false;
+            m_status.buffering = false;
             m_status.summary = "audio del replay desactivado";
             return;
         }
@@ -147,25 +158,32 @@ void ReplayAudio::beginGameplay() {
     {
         std::lock_guard lock(m_mutex);
         generation = ++m_generation;
-        m_frames.clear();
-        m_codecSpecificData.clear();
-        m_ringBytes = 0;
+        if (!preserveExisting) {
+            m_frames.clear();
+            m_codecSpecificData.clear();
+            m_ringBytes = 0;
+        }
+        m_ptsOffsetUs = std::max<std::int64_t>(0, ptsOffsetUs);
         m_status.starting = true;
         m_status.buffering = false;
-        m_status.available = false;
-        m_status.bufferedSeconds = 0.0;
-        m_status.bufferedMiB = 0.0;
-        m_status.packetCount = 0;
-        m_status.signalMeasured = false;
-        m_status.signalPresent = false;
-        m_status.signalDbfs = -120.0;
-        m_status.signalPeak = 0.0;
+        m_status.available = !m_codecSpecificData.empty() && !m_frames.empty();
+        if (!preserveExisting) {
+            m_status.bufferedSeconds = 0.0;
+            m_status.bufferedMiB = 0.0;
+            m_status.packetCount = 0;
+            m_status.signalMeasured = false;
+            m_status.signalPresent = false;
+            m_status.signalDbfs = -120.0;
+            m_status.signalPeak = 0.0;
+        }
 #ifdef GEODE_IS_ANDROID
         m_status.targetUid = static_cast<int>(::getuid());
 #else
         m_status.targetUid = -1;
 #endif
-        m_status.summary = "iniciando captura GAME/MEDIA por UID...";
+        m_status.summary = preserveExisting
+            ? "reanudando captura GAME/MEDIA por UID..."
+            : "iniciando captura GAME/MEDIA por UID...";
         m_status.lastError.clear();
     }
     m_stopRequested.store(false, std::memory_order_release);
@@ -178,10 +196,15 @@ void ReplayAudio::beginGameplay() {
 
 void ReplayAudio::endGameplay() {
     m_stopRequested.store(true, std::memory_order_release);
-    std::lock_guard lock(m_mutex);
-    if (m_status.starting || m_status.buffering) {
-        m_status.summary = "deteniendo audio del replay...";
+    {
+        std::lock_guard lock(m_mutex);
+        if (m_status.starting || m_status.buffering) {
+            m_status.summary = "deteniendo audio del replay...";
+        }
     }
+#ifdef GEODE_IS_ANDROID
+    requestHelperStop();
+#endif
 }
 
 ReplayAudioSnapshot ReplayAudio::snapshot(
@@ -339,6 +362,10 @@ void ReplayAudio::acceptPacket(
         if (ptsUs <= 0) {
             return;
         }
+        ptsUs = std::max<std::int64_t>(1, ptsUs - m_ptsOffsetUs);
+        if (!m_frames.empty()) {
+            ptsUs = std::max(ptsUs, m_frames.back().ptsUs + 1);
+        }
         m_ringBytes += payload.size();
         m_frames.push_back({
             .data = std::move(payload),
@@ -435,7 +462,9 @@ void ReplayAudio::setFailure(std::string message) {
         std::lock_guard lock(m_mutex);
         m_status.starting = false;
         m_status.buffering = false;
-        m_status.available = false;
+        // A failed resume does not invalidate AAC packets already retained
+        // from the preceding segment.
+        m_status.available = !m_codecSpecificData.empty() && !m_frames.empty();
         m_status.lastError = message;
         m_status.summary = "audio no disponible; replay continúa con vídeo";
     }

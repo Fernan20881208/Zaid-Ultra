@@ -31,8 +31,11 @@ persistent ROOT writes behind one serialized, crash-recoverable state guard.
   detection, FPS, frametime, display refresh and optional in-level overlay.
 - Safe Geode console on pause/end screens with fixed diagnostic actions only.
 - Opt-in ROOT Instant Replay beta using the device-validated raw-H.264
-  `screenrecord` stream: a bounded encoded ring keeps recent gameplay and the
-  pause/end Clip button saves existing frames without restarting capture.
+  `screenrecord` stream: a draggable in-level ZU button controls recording,
+  pause/resume, finalization and retroactive Clip 60s saving. Automatic start
+  is optional and disabled by default, so capture overhead is user-controlled.
+  The bounded encoded ring keeps recent gameplay and Clip 60s saves existing
+  frames without restarting or stopping an active capture.
   The frozen ring remains saveable after PlayLayer exits into the end-level
   menu.
   A separate ROOT AudioPolicy helper captures `USAGE_GAME`, `USAGE_MEDIA` and

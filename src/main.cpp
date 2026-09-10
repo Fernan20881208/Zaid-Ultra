@@ -11,6 +11,7 @@
 #include "core/Settings.hpp"
 #include "modules/InstantReplay.hpp"
 #include "modules/TelemetryManager.hpp"
+#include "ui/ReplayFloatingControl.hpp"
 #include "ui/RootConsolePopup.hpp"
 #include "ui/TelemetryOverlay.hpp"
 
@@ -172,6 +173,17 @@ class $modify(ZaidUltraPlayLayer, PlayLayer) {
 #endif
 
         zaid::ultra::SessionManager::get().begin();
+        if (zaid::ultra::settings::enabled("instant-replay") &&
+            zaid::ultra::settings::enabled("replay-floating-control")) {
+            if (auto* replayControl = zaid::ultra::ReplayFloatingControl::create()) {
+                replayControl->setID("zaid-ultra-floating-replay-control");
+                if (this->m_uiLayer) {
+                    this->m_uiLayer->addChild(replayControl, 5000);
+                } else {
+                    this->addChild(replayControl, 5000);
+                }
+            }
+        }
         if (zaid::ultra::settings::enabled("telemetry-overlay")) {
             if (auto* overlay = zaid::ultra::TelemetryOverlay::create()) {
                 overlay->setID("zaid-ultra-telemetry-overlay");

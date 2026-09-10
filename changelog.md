@@ -1,3 +1,17 @@
+# v0.2.0-beta.9
+
+- Añade un botón ZU flotante y arrastrable dentro de PlayLayer. Un toque abre
+  controles manuales para Grabar, Pausar/Seguir, Finalizar y guardar Clip 60s.
+- El inicio automático del replay ahora es opcional y queda apagado por
+  defecto, de modo que el usuario decide cuándo existe carga de captura.
+- Pausar conserva los anillos H.264 y AAC; al reanudar se compacta el intervalo
+  pausado manteniendo una línea de tiempo compartida para vídeo y audio.
+- Finalizar detiene ambos procesos ROOT y guarda automáticamente el tramo
+  disponible (máximo 60 segundos). Guardar Clip sigue siendo retroactivo y no
+  detiene la captura activa.
+- El control solo reclama toques sobre el propio botón, por lo que no consume
+  la entrada de gameplay ni altera CBF fuera de esa zona.
+
 # v0.2.0-beta.8
 
 - Corrige el replay AAC silencioso: el backend ahora incluye `USAGE_GAME` y `USAGE_UNKNOWN`, además de `USAGE_MEDIA`, y restringe la mezcla al UID real de Geometry Dash/Geode.

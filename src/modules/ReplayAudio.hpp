@@ -46,7 +46,7 @@ class ReplayAudio final {
 public:
     static ReplayAudio& get();
 
-    void beginGameplay();
+    void beginGameplay(bool preserveExisting = false, std::int64_t ptsOffsetUs = 0);
     void endGameplay();
     ReplayAudioSnapshot snapshot(std::int64_t fromPtsUs, std::int64_t toPtsUs) const;
     ReplayAudioStatus status() const;
@@ -79,6 +79,7 @@ private:
     std::deque<EncodedAudioFrame> m_frames;
     std::vector<std::uint8_t> m_codecSpecificData;
     std::size_t m_ringBytes = 0;
+    std::int64_t m_ptsOffsetUs = 0;
     std::atomic_bool m_stopRequested{false};
     std::thread m_captureThread;
     std::uint64_t m_generation = 0;

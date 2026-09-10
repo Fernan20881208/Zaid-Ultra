@@ -13,8 +13,11 @@ namespace zaid::ultra {
 
 struct InstantReplayStatus final {
     bool enabled = false;
+    bool gameplayActive = false;
     bool starting = false;
     bool buffering = false;
+    bool paused = false;
+    bool finalized = false;
     bool saving = false;
     bool videoSupported = false;
     bool audioIncluded = false;
@@ -45,6 +48,10 @@ public:
 
     void beginGameplay();
     void endGameplay();
+    bool startManualRecording();
+    bool pauseManualRecording();
+    bool resumeManualRecording();
+    bool finishManualRecording();
     bool saveLast60Seconds();
     InstantReplayStatus status() const;
 
@@ -54,6 +61,8 @@ private:
     InstantReplay(InstantReplay const&) = delete;
     InstantReplay& operator=(InstantReplay const&) = delete;
 
+    bool startCapture(bool preserveExisting);
+    void stopCaptureProcesses();
     void captureLoop(std::uint64_t generation);
     void acceptNal(std::vector<std::uint8_t> nal, std::uint64_t generation);
     void finishAccessUnit(std::uint64_t generation);
@@ -75,10 +84,13 @@ private:
     std::size_t m_ringBytes = 0;
     std::int64_t m_firstPtsUs = 0;
     std::int64_t m_lastPtsUs = 0;
+    std::int64_t m_timelineOffsetUs = 0;
+    std::int64_t m_pauseStartedUs = 0;
     std::atomic_bool m_stopRequested{false};
     std::thread m_captureThread;
     std::thread m_saveThread;
     std::uint64_t m_generation = 0;
+    bool m_saveAfterStop = false;
 };
 
 } // namespace zaid::ultra

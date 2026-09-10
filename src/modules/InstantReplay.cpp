@@ -405,58 +405,189 @@ void InstantReplay::beginGameplay() {
     {
         std::lock_guard lock(m_mutex);
         m_status.enabled = enabled;
+        m_status.gameplayActive = true;
+        m_status.paused = false;
+        m_status.finalized = false;
+        m_saveAfterStop = false;
         if (!enabled) {
             m_status.summary = "desactivado en ajustes";
             return;
         }
-        if (m_status.starting || m_status.buffering) {
-            return;
-        }
+        m_status.summary = "listo; abre ZU y pulsa Grabar";
+        m_status.lastError.clear();
     }
 
+    if (settings::enabled("instant-replay-auto-start")) {
+        (void) startCapture(false);
+    }
+}
+
+bool InstantReplay::startCapture(bool preserveExisting) {
+    // A previous screenrecord may have exited but still own a joinable C++
+    // thread. Join it before reusing the shared stop flag and generation.
     if (m_captureThread.joinable()) {
+        requestRecorderStop();
         m_captureThread.join();
     }
 
     std::uint64_t generation = 0;
+    std::int64_t timelineOffsetUs = 0;
     {
         std::lock_guard lock(m_mutex);
         generation = ++m_generation;
-        m_frames.clear();
-        m_sps.clear();
-        m_pps.clear();
+        if (!preserveExisting) {
+            m_frames.clear();
+            m_sps.clear();
+            m_pps.clear();
+            m_ringBytes = 0;
+            m_firstPtsUs = 0;
+            m_lastPtsUs = 0;
+            m_timelineOffsetUs = 0;
+            m_pauseStartedUs = 0;
+        } else if (m_pauseStartedUs > 0) {
+            m_timelineOffsetUs += std::max<std::int64_t>(0, monotonicUs() - m_pauseStartedUs);
+            m_pauseStartedUs = 0;
+        }
+        timelineOffsetUs = m_timelineOffsetUs;
         m_currentAccessUnit.clear();
         m_currentHasVcl = false;
         m_currentKeyFrame = false;
-        m_ringBytes = 0;
-        m_firstPtsUs = 0;
-        m_lastPtsUs = 0;
         m_status.starting = true;
         m_status.buffering = false;
-        m_status.videoSupported = false;
-        m_status.audioIncluded = false;
-        m_status.audioBufferedSeconds = 0.0;
-        m_status.audioPacketCount = 0;
-        m_status.bufferedSeconds = 0.0;
-        m_status.bufferedMiB = 0.0;
-        m_status.frameCount = 0;
-        m_status.summary = "iniciando encoder H.264 ROOT...";
-        m_status.audioSummary = "iniciando audio...";
+        m_status.paused = false;
+        m_status.finalized = false;
+        m_status.videoSupported = !m_frames.empty() && !m_sps.empty() && !m_pps.empty();
+        if (!preserveExisting) {
+            m_status.audioIncluded = false;
+            m_status.audioBufferedSeconds = 0.0;
+            m_status.audioPacketCount = 0;
+            m_status.bufferedSeconds = 0.0;
+            m_status.bufferedMiB = 0.0;
+            m_status.frameCount = 0;
+        }
+        m_status.summary = preserveExisting
+            ? "reanudando encoder H.264 ROOT..."
+            : "iniciando encoder H.264 ROOT...";
+        m_status.audioSummary = preserveExisting ? "reanudando audio..." : "iniciando audio...";
         m_status.audioError.clear();
         m_status.lastError.clear();
+        m_saveAfterStop = false;
     }
     m_stopRequested.store(false, std::memory_order_release);
     m_captureThread = std::thread([this, generation] { captureLoop(generation); });
-    ReplayAudio::get().beginGameplay();
+    ReplayAudio::get().beginGameplay(preserveExisting, timelineOffsetUs);
+    return true;
 }
 
 void InstantReplay::endGameplay() {
+    bool mustStop = false;
+    {
+        std::lock_guard lock(m_mutex);
+        m_status.gameplayActive = false;
+        mustStop = m_status.starting || m_status.buffering;
+        if (mustStop) {
+            m_status.summary = "deteniendo al salir del nivel...";
+        }
+    }
+    if (mustStop) {
+        stopCaptureProcesses();
+    }
+}
+
+void InstantReplay::stopCaptureProcesses() {
     m_stopRequested.store(true, std::memory_order_release);
     ReplayAudio::get().endGameplay();
-    std::lock_guard lock(m_mutex);
-    if (m_status.starting || m_status.buffering) {
-        m_status.summary = "deteniendo capturador...";
+    requestRecorderStop();
+}
+
+bool InstantReplay::startManualRecording() {
+    {
+        std::lock_guard lock(m_mutex);
+        m_status.enabled = settings::enabled("instant-replay");
+        if (!m_status.enabled) {
+            m_status.lastError = "activa Instant Replay en los ajustes de Zaid-Ultra";
+            return false;
+        }
+        if (!m_status.gameplayActive) {
+            m_status.lastError = "entra a un nivel para iniciar la captura";
+            return false;
+        }
+        if (m_status.starting || m_status.buffering) {
+            m_status.lastError = "la captura ya está activa";
+            return false;
+        }
+        if (m_status.saving) {
+            m_status.lastError = "espera a que termine de guardarse el clip";
+            return false;
+        }
     }
+    return startCapture(false);
+}
+
+bool InstantReplay::pauseManualRecording() {
+    {
+        std::lock_guard lock(m_mutex);
+        if (!m_status.gameplayActive || (!m_status.starting && !m_status.buffering)) {
+            m_status.lastError = "no hay una captura activa para pausar";
+            return false;
+        }
+        m_status.paused = true;
+        m_status.finalized = false;
+        m_status.summary = "pausando; el búfer se conserva...";
+        m_status.lastError.clear();
+    }
+    stopCaptureProcesses();
+    return true;
+}
+
+bool InstantReplay::resumeManualRecording() {
+    {
+        std::lock_guard lock(m_mutex);
+        if (!m_status.enabled || !m_status.gameplayActive || !m_status.paused) {
+            m_status.lastError = "la captura no está pausada";
+            return false;
+        }
+        if (m_status.saving) {
+            m_status.lastError = "espera a que termine de guardarse el clip";
+            return false;
+        }
+    }
+    return startCapture(true);
+}
+
+bool InstantReplay::finishManualRecording() {
+    bool saveNow = false;
+    bool mustStop = false;
+    {
+        std::lock_guard lock(m_mutex);
+        if (m_status.starting || m_status.buffering) {
+            m_status.paused = false;
+            m_status.finalized = true;
+            m_status.summary = "finalizando y preparando MP4...";
+            m_status.lastError.clear();
+            m_saveAfterStop = true;
+            mustStop = true;
+        } else if (m_status.paused) {
+            m_status.paused = false;
+            m_status.finalized = true;
+            if (!m_status.videoSupported) {
+                m_status.lastError = "grabación finalizada antes de recibir vídeo decodificable";
+                m_status.summary = "finalizada sin vídeo; puedes iniciar otra grabación";
+                return false;
+            }
+            m_status.summary = "finalizando búfer pausado...";
+            m_status.lastError.clear();
+            saveNow = true;
+        } else {
+            m_status.lastError = "no hay una captura activa o pausada";
+            return false;
+        }
+    }
+    if (mustStop) {
+        stopCaptureProcesses();
+        return true;
+    }
+    return saveNow && saveLast60Seconds();
 }
 
 bool InstantReplay::saveLast60Seconds() {
@@ -727,6 +858,8 @@ void InstantReplay::captureLoop(std::uint64_t generation) {
     auto status = ::pclose(pipe);
 
     auto errorText = readSmallFile(kErrorFile);
+    bool saveAfterStop = false;
+    bool stopAudioAfterFailure = false;
     {
         std::lock_guard lock(m_mutex);
         if (generation == m_generation) {
@@ -738,13 +871,35 @@ void InstantReplay::captureLoop(std::uint64_t generation) {
                     ? fmt::format("screenrecord terminó inesperadamente (exit={})", exitCode)
                     : errorText;
                 m_status.summary = "capturador detenido por error";
+                m_saveAfterStop = false;
+                stopAudioAfterFailure = true;
+            } else if (!m_stopRequested.load(std::memory_order_acquire)) {
+                // setFailure() already supplied the detailed error while the
+                // stream was being read. The audio helper must not remain
+                // alive after the matching video process has failed.
+                stopAudioAfterFailure = true;
             } else if (m_status.lastError.empty()) {
-                m_status.summary = fmt::format(
-                    "búfer listo; {:.1f} s conservados",
-                    m_status.bufferedSeconds
-                );
+                if (m_status.finalized) {
+                    m_status.summary = "captura finalizada; preparando archivo...";
+                } else if (m_status.paused) {
+                    m_pauseStartedUs = monotonicUs();
+                    m_status.summary = fmt::format(
+                        "pausado; {:.1f} s conservados",
+                        m_status.bufferedSeconds
+                    );
+                } else {
+                    m_status.summary = fmt::format(
+                        "búfer listo; {:.1f} s conservados",
+                        m_status.bufferedSeconds
+                    );
+                }
+                saveAfterStop = m_saveAfterStop;
+                m_saveAfterStop = false;
             }
         }
+    }
+    if (stopAudioAfterFailure) {
+        ReplayAudio::get().endGameplay();
     }
     RootExecutor::get().post([] {
         RootExecutor::get().runRoot(
@@ -752,6 +907,11 @@ void InstantReplay::captureLoop(std::uint64_t generation) {
             "/data/local/tmp/zaid-ultra-replay-screenrecord.err"
         );
     });
+    if (saveAfterStop) {
+        Loader::get()->queueInMainThread([] {
+            (void) InstantReplay::get().saveLast60Seconds();
+        });
+    }
 #endif
 }
 
@@ -781,7 +941,7 @@ void InstantReplay::acceptNal(std::vector<std::uint8_t> nal, std::uint64_t gener
     if (startsNew && !m_currentAccessUnit.empty()) {
         auto frame = EncodedFrame{
             .data = std::move(m_currentAccessUnit),
-            .ptsUs = std::max(monotonicUs(), m_lastPtsUs + 1),
+            .ptsUs = std::max(monotonicUs() - m_timelineOffsetUs, m_lastPtsUs + 1),
             .keyFrame = m_currentKeyFrame,
         };
         m_lastPtsUs = frame.ptsUs;
@@ -832,7 +992,7 @@ void InstantReplay::finishAccessUnit(std::uint64_t generation) {
     }
     EncodedFrame frame;
     frame.data = std::move(m_currentAccessUnit);
-    frame.ptsUs = std::max(monotonicUs(), m_lastPtsUs + 1);
+    frame.ptsUs = std::max(monotonicUs() - m_timelineOffsetUs, m_lastPtsUs + 1);
     frame.keyFrame = m_currentKeyFrame;
     m_lastPtsUs = frame.ptsUs;
     if (m_firstPtsUs == 0) {
@@ -868,6 +1028,7 @@ void InstantReplay::setFailure(std::string message, bool captureFailure) {
         if (captureFailure) {
             m_status.starting = false;
             m_status.buffering = false;
+            m_saveAfterStop = false;
         }
         m_status.saving = false;
         m_status.lastError = message;
