@@ -1,0 +1,67 @@
+{
+  "geode": "5.10.1",
+  "gd": {
+    "win": "2.2081",
+    "android": "2.2081",
+    "mac": "2.2081",
+    "ios": "2.2081"
+  },
+  "id": "zaid.ultra",
+  "name": "Zaid-Ultra",
+  "version": "v0.1.0",
+  "developers": ["Zaid Navarro"],
+  "description": "All-in-one performance, gameplay intelligence, adaptive detail, benchmark and reactive icon FX suite for Geometry Dash.",
+  "dependencies": {
+    "geode.node-ids": ">=v1.23.3"
+  },
+  "settings": {
+    "core-enabled": {
+      "type": "bool",
+      "default": true,
+      "name": "Enable Zaid-Ultra",
+      "description": "Master switch for runtime systems."
+    },
+    "frame-doctor": {
+      "type": "bool",
+      "default": true,
+      "name": "Frame Doctor",
+      "description": "Collect frametime, frame pacing, spikes and level performance zones."
+    },
+    "android-guardian": {
+      "type": "bool",
+      "default": true,
+      "name": "Android Performance Guardian",
+      "description": "Enable Android-oriented performance monitoring and adaptive policies."
+    },
+    "auto-benchmark": {
+      "type": "bool",
+      "default": true,
+      "name": "Auto Benchmark Level",
+      "description": "Build a repeatable performance score from level telemetry."
+    },
+    "run-predictor": {
+      "type": "bool",
+      "default": true,
+      "name": "Run Predictor",
+      "description": "Learn attempt progression and estimate PB momentum from your own runs."
+    },
+    "smart-detail": {
+      "type": "bool",
+      "default": false,
+      "name": "Smart LDM / ULDM",
+      "description": "Learn heavy sections and prepare adaptive detail changes only where needed."
+    },
+    "smart-detail-profile": {
+      "type": "string",
+      "default": "Balanced",
+      "name": "Smart Detail Profile",
+      "one-of": ["Quality", "Balanced", "Stable"]
+    },
+    "rtx-bloom": {
+      "type": "bool",
+      "default": false,
+      "name": "Reactive RTX Bloom",
+      "description": "Adds layered reactive bloom and enhanced glow to the player icon."
+    }
+  }
+}
