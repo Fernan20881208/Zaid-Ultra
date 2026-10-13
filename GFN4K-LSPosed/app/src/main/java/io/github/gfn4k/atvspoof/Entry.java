@@ -11,9 +11,12 @@ public final class Entry implements IXposedHookLoadPackage {
   private static void log(String s) { XposedBridge.log("GFN4K/ATV: " + s); }
   public void handleLoadPackage(XC_LoadPackage.LoadPackageParam p) {
     if (!"com.nvidia.tegrazone3".equals(p.packageName)) return;
-    for (String[] field : new String[][]{{"HARDWARE","mdarcy"},{"MODEL","SHIELD Android TV"},{"MANUFACTURER","NVIDIA"},{"BRAND","NVIDIA"},{"DEVICE","mdarcy"}}) {
+    for (String[] field : new String[][]{{"MODEL","SHIELD Android TV"},{"MANUFACTURER","NVIDIA"},{"BRAND","NVIDIA"},{"DEVICE","mdarcy"}}) {
       try { XposedHelpers.setStaticObjectField(Build.class,field[0],field[1]); } catch(Throwable t) { log(t.toString()); }
     }
+    // Keep Qualcomm hardware identity so SDK/native player can select its real decoder.
+    // Only the Java TV mode and SHIELD feature are emulated.
+    log("GFN4K v0.2.1: Android hardware remains " + Build.HARDWARE);
     try { XposedHelpers.findAndHookMethod(UiModeManager.class,"getCurrentModeType",new XC_MethodHook(){
       protected void beforeHookedMethod(MethodHookParam p) { p.setResult(4); }
     }); } catch(Throwable t) { log(t.toString()); }
