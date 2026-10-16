@@ -16,6 +16,8 @@ on:
     paths:
       - '.github/workflows/a17-samsung-6.12-build.yml'
       - 'RTDriver-A17/scripts/download_mediafire_sources.py'
+      - 'RTDriver-A17/scripts/apply_samsung_czi4.py'
+      - 'RTDriver-A17/scripts/prepare_official_a17.sh'
 
 permissions:
   contents: read
