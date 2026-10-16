@@ -11,7 +11,7 @@ OUT='/sdcard/Download/a17-buildinfo.txt'
   id
   echo '=== CONFIG DE KERNEL ==='
   if [ -r /proc/config.gz ]; then
-    zcat /proc/config.gz 2>/dev/null | grep -E '^CONFIG_(MODULES|MODVERSIONS|MODULE_SIG|MODULE_SIG_FORCE|MODULE_SIG_ALL|MODULE_UNLOAD|KPROBES|KALLSYMS|DEBUG_INFO_BTF|LTO_CLANG|CFI_CLANG|TRIM_UNUSED_KSYMS|IKHEADERS|IKCONFIG|GKI)='
+    zcat /proc/config.gz 2>/dev/null | grep -E '^((# )?CONFIG_(MODULES|MODVERSIONS|MODULE_SIG|MODULE_SIG_FORCE|MODULE_SIG_ALL|MODULE_UNLOAD|KPROBES|KALLSYMS|DEBUG_INFO_BTF|LTO_CLANG|CFI_CLANG|TRIM_UNUSED_KSYMS|IKHEADERS|IKCONFIG|GKI)(=| is not set))'
   else
     echo '/proc/config.gz no accesible'
   fi
