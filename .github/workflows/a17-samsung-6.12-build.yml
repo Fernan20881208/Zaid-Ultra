@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 330
     env:
       A17_REPORT_DIR: ${{ github.workspace }}/a17-ci-results
-      BUILD_MODE: ${{ github.event_name == 'push' && 'prepare' || inputs.mode }}
+      BUILD_MODE: ${{ github.event_name == 'push' && 'kernel_and_probe' || inputs.mode }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
