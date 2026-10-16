@@ -1,0 +1,14 @@
+load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
+
+# ABI smoke-test only: NOT the RT Driver (no memory hooks or ioctl).
+# Copy this BUILD and its C/Makefile into the Samsung kernel workspace
+# under kernel_device_modules-6.12/a17_compat_probe.
+kernel_module(
+    name = "a17_compat_probe",
+    srcs = [
+        "a17_compat_probe.c",
+        "Makefile",
+    ],
+    outs = ["a17_compat_probe.ko"],
+    kernel_build = "//kernel_device_modules-6.12:mgk_64_k612_kernel_aarch64.user",
+)
