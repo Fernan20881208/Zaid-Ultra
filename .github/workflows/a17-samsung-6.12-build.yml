@@ -33,7 +33,6 @@ jobs:
     timeout-minutes: 330
     env:
       GH_TOKEN: ${{ github.token }}
-      A17_WORKDIR: ${{ runner.temp }}/a17-kernel-work
       A17_REPORT_DIR: ${{ github.workspace }}/a17-ci-results
       SOURCE_TAG: ${{ inputs.source_release_tag || 'a17-samsung-sources' }}
       BUILD_MODE: ${{ inputs.mode || 'kernel_and_probe' }}
