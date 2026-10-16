@@ -5,6 +5,7 @@ on:
       - 'RTDriver-A17/**'
       - 'collect_a17_buildinfo.sh'
       - '.github/workflows/a17-rt-static.yml'
+      - '.github/workflows/a17-samsung-6.12-build.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +20,8 @@ jobs:
           set -euo pipefail
           bash -n RTDriver-A17/scripts/build_probe.sh
           bash -n RTDriver-A17/scripts/prepare_official_a17.sh
+          bash -n RTDriver-A17/scripts/ci_build_a17.sh
+          grep -q 'mgk_64_k612_kernel_aarch64.user' RTDriver-A17/src/BUILD.bazel
           bash -n collect_a17_buildinfo.sh
           python3 -m py_compile RTDriver-A17/scripts/apply_samsung_czi4.py
           python3 -m py_compile RTDriver-A17/scripts/inspect_a17_source_bundle.py
