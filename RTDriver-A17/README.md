@@ -58,7 +58,7 @@ SHA-256 esperados:
 
 ### Modos de compilación
 
-- **push** a la definición del workflow o al descargador: se ejecuta **prepare** automáticamente para verificar descargas y la preparación del árbol Samsung, sin compilar.
+- **push** a la definición del workflow o al descargador: se ejecuta **kernel_and_probe** automáticamente (intento completo), previa descarga y verificación de fuentes.
 - **workflow_dispatch / prepare**: descarga, verifica SHA y prepara fuentes con 21 cambios CZI4.
 - **workflow_dispatch / kernel**: adicionalmente intenta compilar el kernel Samsung, recuperar toolchain Clang 19.0.1 r536225 y producir `Module.symvers`.
 - **workflow_dispatch / kernel_and_probe**: además intenta crear el `a17_compat_probe.ko` con Kleaf, una prueba de ABI **que no es el RT Driver**.
