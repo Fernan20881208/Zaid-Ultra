@@ -23,6 +23,20 @@ if [[ "$RELEASE" != "$TARGET" ]]; then
 fi
 grep -qx 'CONFIG_MODULES=y' "$KDIR/.config" || { echo 'ERROR: CONFIG_MODULES=y requerido' >&2; exit 5; }
 grep -qx 'CONFIG_MODVERSIONS=y' "$KDIR/.config" || { echo 'ERROR: CONFIG_MODVERSIONS=y requerido' >&2; exit 6; }
+grep -qx 'CONFIG_CFI_CLANG=y' "$KDIR/.config" || { echo 'ERROR: CONFIG_CFI_CLANG=y requerido para esta configuración Samsung' >&2; exit 11; }
+grep -qx 'CONFIG_MODULE_SIG=y' "$KDIR/.config" || { echo 'ERROR: CONFIG_MODULE_SIG=y requerido para esta configuración Samsung' >&2; exit 12; }
+if ! grep -qx '# CONFIG_MODULE_SIG_FORCE is not set' "$KDIR/.config"; then
+  echo 'ERROR: configuración MODULE_SIG_FORCE diferente de la capturada' >&2
+  exit 13
+fi
+if ! grep -qx 'CONFIG_MODULE_SIG_ALL=y' "$KDIR/.config"; then
+  echo 'ERROR: configuración MODULE_SIG_ALL diferente de la capturada' >&2
+  exit 14
+fi
+if ! grep -qE '^0x[0-9A-Fa-f]+[[:space:]]+[^[:space:]]+[[:space:]]+' "$KDIR/Module.symvers"; then
+  echo 'ERROR: Module.symvers no contiene CRCs en formato esperado; no reutilizar un archivo de otro kernel' >&2
+  exit 15
+fi
 command -v clang >/dev/null || { echo 'ERROR: clang no está instalado' >&2; exit 7; }
 make -C "$KDIR" M="$ROOT/src" ARCH=arm64 LLVM=1 modules
 KO="$ROOT/src/a17_compat_probe.ko"
