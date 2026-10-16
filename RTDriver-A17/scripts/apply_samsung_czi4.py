@@ -9,6 +9,7 @@ import io
 import json
 from pathlib import Path, PurePosixPath
 import shutil
+import stat
 import tarfile
 import time
 import zipfile
@@ -97,7 +98,16 @@ def main():
             saved.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(dest, saved)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(data)
+        # Samsung's tarball includes read-only source files (e.g. GPU Mali).
+        # Give the owner temporary write permission and then restore the original mode.
+        old_mode = stat.S_IMODE(dest.stat().st_mode) if was_file else None
+        if was_file:
+            dest.chmod(old_mode | stat.S_IWUSR)
+        try:
+            dest.write_bytes(data)
+        finally:
+            if was_file:
+                dest.chmod(old_mode)
         manifest.append({"path": rel.as_posix(), "existed": was_file, "sha256": hashlib.sha256(data).hexdigest()})
     (backup / "update-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf8")
     print("Actualización aplicada. Backup:", backup)
