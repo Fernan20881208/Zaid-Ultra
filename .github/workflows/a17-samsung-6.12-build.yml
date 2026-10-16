@@ -18,6 +18,8 @@ on:
       - 'RTDriver-A17/scripts/download_mediafire_sources.py'
       - 'RTDriver-A17/scripts/apply_samsung_czi4.py'
       - 'RTDriver-A17/scripts/prepare_official_a17.sh'
+      - 'RTDriver-A17/scripts/ci_build_a17.sh'
+      - 'RTDriver-A17/scripts/integrate_aosp_deps.sh'
 
 permissions:
   contents: read
