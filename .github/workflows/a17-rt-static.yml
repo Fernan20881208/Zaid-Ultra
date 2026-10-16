@@ -21,6 +21,9 @@ jobs:
           bash -n RTDriver-A17/scripts/build_probe.sh
           bash -n RTDriver-A17/scripts/prepare_official_a17.sh
           bash -n RTDriver-A17/scripts/ci_build_a17.sh
+          bash -n RTDriver-A17/scripts/integrate_aosp_deps.sh
+          bash -n RTDriver-A17/scripts/test_integrate_aosp_deps.sh
+          bash RTDriver-A17/scripts/test_integrate_aosp_deps.sh
           grep -q 'mgk_64_k612_kernel_aarch64.user' RTDriver-A17/src/BUILD.bazel
           bash -n collect_a17_buildinfo.sh
           python3 -m py_compile RTDriver-A17/scripts/apply_samsung_czi4.py
