@@ -53,13 +53,10 @@ chmod 0755 "$REPO_BIN"
     tools/mkbootimg
 )
 KROOT="$OUTPUT/Kernel/kernel"
-# Preserve Samsung's build/, kernel_device_modules-6.12/, vendor/ and sources.
-for d in prebuilts external tools; do
-  if [[ -d "$AOSP/$d" ]]; then
-    mkdir -p "$KROOT/$d"
-    rsync -a --ignore-existing "$AOSP/$d/" "$KROOT/$d/"
-  fi
-done
+# Samsung's KROOT/external links point to ../../external.
+# Integrate into the real targets, preserving Kleaf build and vendor sources.
+bash "$REPO_ROOT/RTDriver-A17/scripts/integrate_aosp_deps.sh" "$AOSP" "$KROOT" \
+  2>&1 | tee "$REPORT/aosp-integration.log"
 CLANG_BIN="$KROOT/prebuilts/clang/host/linux-x86/clang-r536225/bin/clang"
 if [[ ! -x "$CLANG_BIN" ]]; then
   echo "ERROR: AOSP manifest no entrego clang-r536225. No compilar con otra version." | tee -a "$REPORT/status.txt" >&2
