@@ -18,6 +18,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n RTDriver-A17/scripts/build_probe.sh
+          bash -n RTDriver-A17/scripts/prepare_official_a17.sh
           bash -n collect_a17_buildinfo.sh
           python3 -m py_compile RTDriver-A17/scripts/apply_samsung_czi4.py
           python3 -m py_compile RTDriver-A17/scripts/inspect_a17_source_bundle.py
