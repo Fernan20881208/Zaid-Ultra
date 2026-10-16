@@ -20,6 +20,8 @@ jobs:
           bash -n RTDriver-A17/scripts/build_probe.sh
           bash -n collect_a17_buildinfo.sh
           python3 -m py_compile RTDriver-A17/scripts/apply_samsung_czi4.py
+          python3 -m py_compile RTDriver-A17/scripts/inspect_a17_source_bundle.py
+          python3 RTDriver-A17/scripts/inspect_a17_source_bundle.py --help >/dev/null
           python3 RTDriver-A17/scripts/apply_samsung_czi4.py --help >/dev/null
           grep -q "6.12.38-android16-5-abA175FXXS7CZI4-4k" RTDriver-A17/scripts/build_probe.sh
           grep -q 'obj-m' RTDriver-A17/src/Makefile
