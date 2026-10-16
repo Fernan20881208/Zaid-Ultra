@@ -1,9 +1,10 @@
-name: Build Galaxy A17 kernel 6.12 (real sources)
+name: Build Galaxy A17 kernel 6.12 (MediaFire sources)
+
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Etapa que se debe intentar"
+        description: "Etapa de compilacion"
         type: choice
         required: true
         default: kernel_and_probe
@@ -11,34 +12,29 @@ on:
           - prepare
           - kernel
           - kernel_and_probe
-      source_release_tag:
-        description: "Tag de Release con los 2 ZIP Samsung originales"
-        type: string
-        required: true
-        default: a17-samsung-sources
-  release:
-    types: [published]
+  push:
+    paths:
+      - '.github/workflows/a17-samsung-6.12-build.yml'
+      - 'RTDriver-A17/scripts/download_mediafire_sources.py'
 
 permissions:
   contents: read
 
 concurrency:
-  group: a17-samsung-kernel-build
+  group: a17-samsung-6.12-\${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   compile:
-    if: github.event_name != 'release' || github.event.release.tag_name == 'a17-samsung-sources'
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     env:
-      GH_TOKEN: ${{ github.token }}
-      A17_REPORT_DIR: ${{ github.workspace }}/a17-ci-results
-      SOURCE_TAG: ${{ inputs.source_release_tag || 'a17-samsung-sources' }}
-      BUILD_MODE: ${{ inputs.mode || 'kernel_and_probe' }}
+      A17_REPORT_DIR: \${{ github.workspace }}/a17-ci-results
+      BUILD_MODE: \${{ github.event_name == 'push' && 'prepare' || inputs.mode }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
+
       - name: Install Linux build prerequisites
         shell: bash
         run: |
@@ -50,23 +46,20 @@ jobs:
             build-essential cmake ninja-build clang lld binutils file kmod
           mkdir -p "$A17_REPORT_DIR"
           df -h . | tee "$A17_REPORT_DIR/disk-at-start.txt"
-      - name: Download exact Samsung original source ZIPs from release
+
+      - name: Download from MediaFire and verify original SHA-256
         shell: bash
         run: |
           set -euo pipefail
           SRC="$RUNNER_TEMP/a17-input-sources"
-          mkdir -p "$SRC"
-          gh release download "$SOURCE_TAG" \
-            --repo "$GITHUB_REPOSITORY" --dir "$SRC" \
-            --pattern 'SM-A175F_16_Opensource.zip' \
-            --pattern 'SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip'
+          mkdir -p "$SRC" "$A17_REPORT_DIR"
+          python3 RTDriver-A17/scripts/download_mediafire_sources.py \
+            --out-dir "$SRC" 2>&1 | tee "$A17_REPORT_DIR/mediafire-download.log"
           test -s "$SRC/SM-A175F_16_Opensource.zip"
           test -s "$SRC/SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip"
-          {
-            echo '4fa6e41f63151728277f49842d3fe1d59d6cfaaf853a161c7c2ed98f906727dd  '"$SRC"'/SM-A175F_16_Opensource.zip'
-            echo '643bde1afbf8dd17f98962314245818a0057ed46d6a22503f7ddeacd0478495b  '"$SRC"'/SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip'
-          } | sha256sum --check
-      - name: Prepare, build Samsung kernel and optional ARM64 compatibility probe
+          sha256sum "$SRC"/SM-A175F*.zip > "$A17_REPORT_DIR/source-sha256.txt"
+
+      - name: Prepare source tree and optionally compile kernel and ARM64 probe
         shell: bash
         run: |
           set -euo pipefail
@@ -75,11 +68,12 @@ jobs:
             "$SRC/SM-A175F_16_Opensource.zip" \
             "$SRC/SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip" \
             "$BUILD_MODE"
-      - name: Upload logs and verified artifacts (also on failure)
+
+      - name: Upload diagnostic logs and verified outputs even after failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: a17-6.12-build-report-${{ github.run_number }}
+          name: a17-mediafire-build-report-\${{ github.run_number }}
           path: a17-ci-results/
           if-no-files-found: warn
           retention-days: 14
