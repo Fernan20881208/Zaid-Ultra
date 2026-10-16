@@ -103,9 +103,10 @@ if [[ "$MODE" == "kernel_and_probe" ]]; then
   cp "$SRC/a17_compat_probe.c" "$SRC/Makefile" "$SRC/BUILD.bazel" "$MOD/"
   (
     cd "$KROOT"
+    BAZEL_OUT="$(realpath -m "$KROOT/$OUT_DIR")"
     tools/bazel \
-      --output_root="${OUT_DIR}" \
-      --output_base="${OUT_DIR}/bazel/output_user_root/output_base" \
+      --output_root="$BAZEL_OUT" \
+      --output_base="$BAZEL_OUT/bazel/output_user_root/output_base" \
       build --config=stamp \
       --repo_manifest="${KROOT}/kernel_device_modules-6.12/fake_manifest.xml" \
       --//build/bazel_mgk_rules:kernel_version=6.12 \
