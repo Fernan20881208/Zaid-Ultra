@@ -41,25 +41,30 @@ bash RTDriver-A17/scripts/build_probe.sh /ruta/arbol-kernel-preparado
 No hay instalaciones automáticas, `insmod`, reinicios, flasheos ni alteración de restricciones SELinux o firmas.
 
 
-## Compilación real mediante GitHub Actions (añadida)
+## Compilación en GitHub Actions — descarga desde MediaFire
 
-El workflow `.github/workflows/a17-samsung-6.12-build.yml` **intenta ejecutar Samsung `kernel_device_modules-6.12/build.sh`**, no una simulación. El árbol fuente oficial y el overlay CZI4 ya se probaron localmente, pero **GitHub todavía no tiene los dos ZIP originales**, por lo que una compilación completa no se puede disparar automáticamente con los archivos adjuntos de ChatGPT.
+El workflow [Build Galaxy A17 kernel 6.12 (MediaFire sources)](../../.github/workflows/a17-samsung-6.12-build.yml) **ya no necesita GitHub Releases ni adjuntar ZIPs manualmente**.
 
-### Habilitar la compilación en GitHub
+Fuentes configuradas (enlaces proporcionados por el propietario):
+- Paquete combinado (actualización CZI4): https://www.mediafire.com/file/jwwfja7b8dqbswj/SM-A175F.zip/file
+- Fuentes base: https://www.mediafire.com/file/dtt5mrk0wzevk9t/SM-A175F_16_Opensource.zip/file
 
-1. En el repositorio, entrar a **Releases → Draft a new release**.
-2. Crear el tag exacto **`a17-samsung-sources`** (por ejemplo, título "Samsung A17 source inputs").
-3. Subir **ambos** archivos originales, sin renombrarlos ni extraerlos:
-   - `SM-A175F_16_Opensource.zip` (~347 MB).
-   - `SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip` (~228 KB).
-4. Publicar la Release **después** de adjuntar ambos ZIPs. Esto dispara el workflow automáticamente. También se puede ejecutar manualmente desde **Actions → Build Galaxy A17 kernel 6.12 (real sources) → Run workflow** seleccionando el modo `prepare`, `kernel` o `kernel_and_probe`.
+El script `scripts/download_mediafire_sources.py` resuelve las páginas de descarga, obtiene ambos ZIP, comprueba SHA-256 **contra los archivos examinados**, extrae únicamente el ZIP incremental CZI4 de `SM-A175F.zip` y lo verifica. Rechaza archivos HTML, ZIPs incorrectos y cambios de contenido. No aplica el DTS de la variante coreana.
 
-Los ZIPs son código fuente abierto Samsung. Si el repo es público, los assets de esa Release también serán públicos. No agregar los ZIP a git, ya que GitHub rechaza archivos normales de más de 100 MB.
+SHA-256 esperados:
+- `SM-A175F.zip`: `8d05b158f0b393ef0f62771a5dc29f96298813a793cdcb0bd6acf442aa985b6a`.
+- `SM-A175F_16_Opensource.zip`: `4fa6e41f63151728277f49842d3fe1d59d6cfaaf853a161c7c2ed98f906727dd`.
+- ZIP incremental CZI4 extraído: `643bde1afbf8dd17f98962314245818a0057ed46d6a22503f7ddeacd0478495b`.
 
-### Controles y artefactos
+### Modos de compilación
 
-El workflow compara ambos SHA-256 contra archivos examinados, obtiene toolchains Android 16 / 6.12 con el manifiesto AOSP, exige Clang **r536225 (19.0.1)** e intenta el target Samsung `mgk_64_k612_kernel_aarch64.user`. En modo `kernel_and_probe`, intenta construir mediante Kleaf `a17_compat_probe.ko`.
+- **push** a la definición del workflow o al descargador: se ejecuta **prepare** automáticamente para verificar descargas y la preparación del árbol Samsung, sin compilar.
+- **workflow_dispatch / prepare**: descarga, verifica SHA y prepara fuentes con 21 cambios CZI4.
+- **workflow_dispatch / kernel**: adicionalmente intenta compilar el kernel Samsung, recuperar toolchain Clang 19.0.1 r536225 y producir `Module.symvers`.
+- **workflow_dispatch / kernel_and_probe**: además intenta crear el `a17_compat_probe.ko` con Kleaf, una prueba de ABI **que no es el RT Driver**.
 
-**Importante:** conseguir una salida ELF ARM64 y `Module.symvers` no garantiza ABI o KMI idéntico al teléfono. La primera ejecución puede fallar por prebuilts, dependencias o discrepancias del entorno Samsung; los logs se adjuntan como artifact con `if: always()`. No se ejecuta `insmod` ni se modifica el teléfono.
+La salida se publica en artifacts de Actions bajo `a17-mediafire-build-report-<numero>` incluso si el trabajo falla.
 
-La ejecución satisfactoria del workflow rápido de validación estática **no es** una compilación de kernel. El driver original de funciones de memoria y breakpoints sigue sin portarse porque no tenemos sus fuentes.
+**Advertencia:** MediaFire puede restringir las descargas automatizadas, exigir CAPTCHA o devolver HTML. Si ocurre, la descarga falla de forma explícita y hay que usar un origen de archivos que permita descargas sin interacción.
+
+Las fuentes de Samsung no contienen el código fuente del RT Driver original y **no se ha verificado todavía un módulo funcional para el teléfono**. No se ejecutan flasheos, root, ni `insmod`.
