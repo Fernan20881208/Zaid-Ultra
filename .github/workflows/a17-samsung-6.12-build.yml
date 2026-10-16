@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: a17-samsung-6.12-\${{ github.ref }}
+  group: a17-samsung-6.12-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -29,8 +29,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     env:
-      A17_REPORT_DIR: \${{ github.workspace }}/a17-ci-results
-      BUILD_MODE: \${{ github.event_name == 'push' && 'prepare' || inputs.mode }}
+      A17_REPORT_DIR: ${{ github.workspace }}/a17-ci-results
+      BUILD_MODE: ${{ github.event_name == 'push' && 'prepare' || inputs.mode }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: a17-mediafire-build-report-\${{ github.run_number }}
+          name: a17-mediafire-build-report-${{ github.run_number }}
           path: a17-ci-results/
           if-no-files-found: warn
           retention-days: 14
