@@ -1,47 +1,41 @@
-# Galaxy A17 RT Driver — port seguro, fase 2
+# Galaxy A17 SM-A175F — proyecto de compatibilidad RT Driver (fase 3)
 
-**Objetivo:** SM-A175F, Android 16, `6.12.38-android16-5-abA175FXXS7CZI4-4k`.
+**Objetivo:** Android 16, KernelSU, kernel `6.12.38-android16-5-abA175FXXS7CZI4-4k`.
 
-**Estado:** todavía NO es el RT Driver. Este directorio contiene un *módulo de prueba de compatibilidad*, no el controlador original ni un módulo probado en el teléfono.
+**Estado (2026-10-16):** árbol Linux Samsung 6.12.38 completo **recibido, extraído y combinado** con los 21 cambios de CZI4, y `build.config` generado mediante la herramienta oficial. **No se ha compilado ningún .ko para el teléfono.** El `a17_compat_probe.c` de este repo es únicamente una prueba de compilación/carga básica, **no el RT Driver completo**.
 
-## Datos verificados con el diagnóstico real del teléfono
+## Fuentes oficiales verificadas
 
-- Kernel: `6.12.38-android16-5-abA175FXXS7CZI4-4k`
-- Arquitectura: `aarch64`, Android Clang 19.0.1.
-- Root: KernelSU, `uid=0`, SELinux `u:r:ksu:s0`.
-- `CONFIG_MODULES=y`, `CONFIG_MODULE_UNLOAD=y`, `CONFIG_MODVERSIONS=y`.
-- `CONFIG_MODULE_SIG=y`: no se conoce todavía `CONFIG_MODULE_SIG_FORCE` ni la política completa de firmas.
-- `CONFIG_KPROBES=y`, `CONFIG_DEBUG_INFO_BTF=y`.
-- `/sys/kernel/btf/vmlinux` y `/sys/kernel/kheaders.tar.xz` presentes.
-- Los logs compartidos NO muestran una razón detallada del rechazo del RT Driver: las líneas capturadas son `connlog`, no el error del cargador.
+1. `SM-A175F_16_Opensource.zip` (SHA-256 `4fa6e41f63151728277f49842d3fe1d59d6cfaaf853a161c7c2ed98f906727dd`).
+2. `SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip` (SHA-256 `643bde1afbf8dd17f98962314245818a0057ed46d6a22503f7ddeacd0478495b`).
 
-La versión original del módulo extraído es `6.1.112-00034-g226e9f92a06c-dirty`: **incompatible con 6.12.38**. No basta con editar `vermagic`, CRC, nombre, o empaquetar el archivo.
+Las fuentes base son ~2.2 GiB al extraerse; no están subidas al repositorio GitHub porque el ZIP es grande. Se necesita descargar los originales desde Samsung Open Source. El paquete SM-A175N_KOR DTS no se debe mezclar automáticamente con SM-A175F.
 
-La actualización A175FXXS7CZI4 está documentada por Samsung:
-https://doc.samsungmobile.com/SM-A175F/036466251223/eng.html
+[Informe del proceso real](reports/base-OSS-6.12.38-CZI4-integrated.md)
 
-## Siguiente paso: símbolos auténticos
+## Preparación de fuentes reproducible en Linux (no en Termux)
 
-Linux Kbuild necesita un árbol **preparado para el kernel exacto** y el `Module.symvers` con CRC reales (no inventados). `modules_prepare` por sí solo NO genera `Module.symvers` cuando `CONFIG_MODVERSIONS=y`. La presencia de BTF y kheaders en el teléfono tampoco reemplaza estos requisitos.
-
-1. Buscar el paquete de fuentes exacto en https://opensource.samsung.com (SM-A175F/A175FXXS7CZI4).
-2. Identificar el build Kleaf utilizado por ese firmware y sus artefactos KMI/Module.symvers.
-3. Obtener fuentes del RT Driver original o desarrollar una implementación propia con especificación clara. Solo se dispone del binario, cuyos símbolos referencian funciones de kprobes y memoria de procesos.
-4. Validar primero el módulo mínimo de esta carpeta contra un árbol Samsung exacto, sin cargarlo automáticamente.
-5. Auditar el driver original antes de portar cualquier manejo de memoria, ioctl o interrupciones.
-
-## Scripts
-
-Recolectar información adicional (solo lectura; se escribe un TXT en Download):
-
-```sh
-su -c 'sh /sdcard/Download/collect_a17_buildinfo.sh'
+```bash
+bash RTDriver-A17/scripts/prepare_official_a17.sh \
+  /ruta/SM-A175F_16_Opensource.zip \
+  /ruta/SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip \
+  /ruta/al/directorio-de-salida-nuevo
 ```
 
-Compilar **solo el probe** cuando se cuente con el árbol Samsung exacto, preparado y con `Module.symvers`:
+Este script verifica ambos SHA-256, descomprime las fuentes, aplica la actualización CZI4 con copia de seguridad y llama al generador oficial de `build.config`. **No compila ni instala el driver**.
 
+El reporte de diagnóstico del dispositivo encontró:
+- `CONFIG_MODULES=y`, `CONFIG_MODVERSIONS=y`, `CONFIG_MODULE_SIG=y`, `CONFIG_MODULE_SIG_ALL=y`, `# CONFIG_MODULE_SIG_FORCE is not set`.
+- `CONFIG_CFI_CLANG=y`, `CONFIG_KPROBES=y`, `CONFIG_DEBUG_INFO_BTF=y`.
+- KernelSU activo, BTF y `kheaders.tar.xz` presentes en el teléfono.
+
+## Bloqueador para compilar .ko ARM64
+
+La fuente oficial requiere toolchain/prebuilts externos (Clang Android 19.0.1 r536225, Bazel/Kleaf, AOSP/Samsung) y **un build correcto del kernel del equipo** para producir `Module.symvers` con CRC reales. Este entorno dispone de Clang 17 y no trae los prebuilts; por eso **no se intentó declarar que el driver es compatible**. Incluso al obtener `Module.symvers`, faltaría el código fuente del RT Driver original: el binario 6.1.112 no puede convertirse directamente en el driver 6.12 cambiando `vermagic`.
+
+El módulo de prueba `src/a17_compat_probe.c` no implementa acceso a memoria ajena, breakpoints ni interfaces privilegiadas; permitirá comprobar el ABI solo cuando tengamos el entorno de build completo. Compilarlo requiere un árbol preparado con `Module.symvers` y `.config` auténticos:
 ```bash
 bash RTDriver-A17/scripts/build_probe.sh /ruta/arbol-kernel-preparado
 ```
 
-**No hay instalador, no se ejecuta `insmod`, no se modifica el kernel, no se salta SELinux o la firma.**
+No hay instalaciones automáticas, `insmod`, reinicios, flasheos ni alteración de restricciones SELinux o firmas.
