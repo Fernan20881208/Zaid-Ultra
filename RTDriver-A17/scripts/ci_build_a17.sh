@@ -123,13 +123,29 @@ if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
   echo "Probe Bazel environment: KERNEL_VERSION=$KERNEL_VERSION, KERNEL_BUILD_VARIANT=$KERNEL_BUILD_VARIANT" | tee -a "$REPORT/status.txt"
   (
     cd "$KROOT"
-    BAZEL_OUT="$(realpath -m "$KROOT/$OUT_DIR")"
+    # Official Samsung build.sh sources _setup_env.sh before Bazel.
+    # Source it here too; SOURCE_DATE_EPOCH=0 avoids missing Git metadata.
+    # Samsung build.config requires temporarily disabling nounset.
+    set +u
+    source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh > "$REPORT/probe-env.log" 2>&1
+    set -u
+    [[ "$KERNEL_VERSION" == "kernel-6.12" ]]
+    [[ "$KERNEL_BUILD_VARIANT" == "user" ]]
+    [[ "$SOURCE_DATE_EPOCH" == "0" ]]
+    [[ "$OUT_DIR" == /* ]]
+    echo "Probe environment verified: KERNEL_VERSION=$KERNEL_VERSION SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
+    BAZEL_OUT="$OUT_DIR"
     tools/bazel \
       --output_root="$BAZEL_OUT" \
       --output_base="$BAZEL_OUT/bazel/output_user_root/output_base" \
       build --config=stamp \
-      --repo_manifest="${KROOT}/kernel_device_modules-6.12/fake_manifest.xml" \
+      --repo_manifest="$KROOT:$KROOT/kernel_device_modules-6.12/fake_manifest.xml" \
+      --experimental_writable_outputs \
+      --allow_ddk_unsafe_headers=1 \
+      --workaround_btrfs_b292212788 \
       --//build/bazel_mgk_rules:kernel_version=6.12 \
+      --experimental_optimize_ddk_config_actions \
+      --user_ddk_unsafe_headers=//kernel_device_modules-6.12:mtk_use_gki_unsafe_headers \
       //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe
   ) 2>&1 | tee "$REPORT/probe-build.log"
 
