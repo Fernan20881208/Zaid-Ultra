@@ -113,6 +113,23 @@ int main(void)
     module.name = 1; assert(call(RT_OP_MODULE_BASE, &module) == -EFAULT);
     module.name = (uintptr_t)"example.so"; deny_mm = 1;
     assert(call(RT_OP_MODULE_BASE, &module) == -EACCES);
+    /* Maximum unaligned request spans 17 4K pages: exercise both the
+     * page-pointer array bound and the last one-byte copy. */
+    reset();
+    unsigned char maximum[RT_A17_MAX_TRANSFER];
+    req = (struct rt_copy_memory){
+        .pid = 42, .addr = 0x10001, .buffer = (uintptr_t)maximum,
+        .size = sizeof(maximum),
+    };
+    test_vmas[0].vm_end = 0x21000;
+    test_pages[16].bytes[0] = 0xcc;
+    test_pages[16].bytes[1] = 0xdd;
+    assert(call(RT_OP_READ_MEM, &req) == 0);
+    assert(maximum[0] == 0x5a && maximum[sizeof(maximum) - 1] == 0xcc);
+    memset(maximum, 0x21, sizeof(maximum));
+    assert(call(RT_OP_WRITE_MEM, &req) == 0 && dirty_pages == 17);
+    assert(test_pages[0].bytes[0] == 0x5a && test_pages[0].bytes[1] == 0x21);
+    assert(test_pages[16].bytes[0] == 0x21 && test_pages[16].bytes[1] == 0xdd);
     rt_a17_exit();
     puts("Production RT ioctl/backend host fault-injection tests passed (not device tests).");
     return 0;
