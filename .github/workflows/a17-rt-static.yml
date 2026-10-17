@@ -28,6 +28,11 @@ jobs:
           "$RUNNER_TEMP/a17-rt-abi"
           bash -n RTDriver-A17/rt_port/tests/test_makefile.sh
           bash RTDriver-A17/rt_port/tests/test_makefile.sh
+          bash -n RTDriver-A17/rt_port/collect_diag.sh
+          bash -n RTDriver-A17/rt_port/tests/test_collect_diag.sh
+          bash RTDriver-A17/rt_port/tests/test_collect_diag.sh
+          grep -Fq 'kernel_and_rt_diag' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'RTDriver-A17/rt_port/collect_diag.sh' RTDriver-A17/scripts/ci_build_a17.sh
           test -f RTDriver-A17/rt_port/BUILD.bazel
           test -f RTDriver-A17/rt_port/rt_a17_diag.c
           bash -n RTDriver-A17/scripts/configure_stock_release.sh
@@ -46,7 +51,7 @@ jobs:
           grep -Fq 'a17_compat_probe/a17_compat_probe/a17_compat_probe.ko' RTDriver-A17/scripts/collect_probe_artifact.sh
           grep -Fq 'modinfo -F vermagic' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'modinfo -F signer' RTDriver-A17/scripts/ci_build_a17.sh
-          grep -Fq 'case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe)' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag)' RTDriver-A17/scripts/ci_build_a17.sh
           grep -q 'A17_STAGE="\$3"' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'if [[ "$A17_STAGE" == "kernel_and_probe" ]]' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'export KERNEL_VERSION="kernel-6.12"' RTDriver-A17/scripts/ci_build_a17.sh
