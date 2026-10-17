@@ -1,5 +1,9 @@
 # RT A17: primer port parcial
 
+**Compilado en Actions #39071647279:** `rt_a17.ko` de 26960 bytes, ET_REL AArch64,
+vermagic completo exacto y 45 CRC coincidentes con su kernel, sin firma.
+[Informe, hashes, modinfo y descarga](../../reports/rt-port-build-39071647279.md).
+
 `rt_a17.c` implementa tres operaciones del ABI recuperado. Es una implementación
 nueva, separada del módulo de diagnóstico `rt_a17_diag.c`, que conserva su ABI 1.
 No se ha ejecutado en el teléfono ni se ha verificado su uso con el APK original.

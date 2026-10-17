@@ -45,3 +45,33 @@ El APK y su ejecutable nativo se examinaron como material binario. No se dispone
 del proyecto fuente del cliente original y no se ha reconstruido ni modificado
 su inicialización privada. Se entrega un adaptador C fuente y consulta de
 capacidades para facilitar esa integración sin atribuirle resultados inexistentes.
+
+## Contraste estático con el cliente del APK
+
+El ejecutable extraído, sin ejecutarlo, del payload de
+`assets/Zaid-Hack-v1.5-Streamer.sh` tiene SHA-256
+`396ff9dfacaa423c7efbe5ab2501e43d2d677c1138a75ed7306ddf0a18e5032c`.
+Su código AArch64 prepara READ `0x801` en `0x135bc0` y WRITE `0x802`
+en `0x136510`. Ambos usan la secuencia compartida en `0x13ad74`:
+
+```text
+str w22, [sp]               pid en offset 0
+stp x21, x20, [sp, #8]      dirección en 8 y buffer en 16
+str x19, [sp, #0x18]        tamaño en 24
+b 0x13dab0                 ioctl@plt
+```
+
+También contiene llamadas a MODULE_BASE `0x803` en `0x135ffc` y `0x1362c8`.
+Esto confirma una coincidencia estática del paquete de memoria con los
+32 bytes recuperados del módulo. No demuestra que el APK elija el nuevo nodo,
+consulte capacidades, ni complete sus funciones sobre SM-A175F. Esas pruebas
+siguen pendientes y no se ha alterado el APK ni su firma.
+
+## ABI de breakpoints conservado como investigación
+
+El DWARF también identifica `HW_BREAKPOINT_ACTION` en DIE `0x30830`:
+ADD=1 y REMOVE=2; y `HW_BREAKPOINT_TYPE` en `0x30849`:
+EXECUTE=0, WRITE=1 y RW=2. `_HW_BREAKPOINT_HIT_INFO` en `0x30911`
+tiene tamaño 296, con `pid` en 0, `timestamp` en 8, `addr` en 16 y
+`regs` en 24. Son datos del original, no capacidades implementadas en el port.
+No se han trasladado manejadores ni asignado recursos de hardware.

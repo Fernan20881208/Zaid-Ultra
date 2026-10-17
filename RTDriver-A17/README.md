@@ -2,9 +2,12 @@
 
 **Objetivo:** Android 16, KernelSU, kernel `6.12.38-android16-5-abA175FXXS7CZI4-4k`.
 
-**Trabajo nuevo:** [primer port parcial RT](rt_port/runtime/README.md), separado
-del diagnóstico. Implementa READ_MEM, WRITE_MEM y MODULE_BASE en código nuevo;
+**Port parcial compilado:** `rt_a17.ko` v0.1, separado del diagnóstico, construido
+en Actions #39071647279: ELF AArch64, vermagic exacto y 45 CRC coincidentes con
+el kernel generado, sin firma. Implementa READ_MEM, WRITE_MEM y MODULE_BASE;
 breakpoints, inicialización privada y ejecución en el teléfono siguen pendientes.
+[Informe y descarga](reports/rt-port-build-39071647279.md) ·
+[Alcance del port](rt_port/runtime/README.md).
 
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
 como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,

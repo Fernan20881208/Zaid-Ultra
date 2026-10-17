@@ -1,9 +1,10 @@
 # A17 RT · Primera fase de ABI nueva
 
-**Port parcial en desarrollo:** [runtime/](runtime/README.md) añade un módulo
+**Port parcial compilado:** [runtime/](runtime/README.md) añade un módulo
 separado `rt_a17` para READ_MEM, WRITE_MEM y MODULE_BASE con APIs exportadas
 del kernel y comprobaciones de permisos. El diagnóstico descrito aquí mantiene
 sus capacidades en cero. Prueba en el teléfono e integración del APK pendientes.
+[Build #39071647279: artefacto, modinfo, 45 CRC y hashes](../reports/rt-port-build-39071647279.md).
 
 Origen: RTdriver_extracted_arm64.ko.
 SHA-256: 0df5b0e7710af752ab21306dcd1b4be3b40598c977ccd1de6b95fd43d0c8ba72.
