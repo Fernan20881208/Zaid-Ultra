@@ -1,0 +1,9 @@
+User-authorized single kernel_and_probe build for Samsung Galaxy A17 SM-A175F
+Observed firmware: 6.12.38-android16-5-abA175FXXS7CZI4-4k
+Kernel localversion: -abA175FXXS7CZI4 (inserted by upstream Linux scripts/setlocalversion)
+Source GKI CONFIG_LOCALVERSION=-4k, yielding target release without ELF modification
+Previous successful ELF AArch64 compiler: GitHub Actions #39047665621
+Stock release + CRC static regression: #39054341103 SUCCESS
+CRC verification compares to compile-time Module.symvers only, not running device
+OEM signing cannot be reproduced without its private key; record unsigned status honestly
+Do not insert .ko, reboot phone or flash firmware
