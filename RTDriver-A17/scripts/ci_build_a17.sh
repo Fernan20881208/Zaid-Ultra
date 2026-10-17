@@ -7,18 +7,18 @@ if [[ $# -ne 3 ]]; then
 fi
 BASE_ZIP="$(realpath "$1")"
 CZI4_ZIP="$(realpath "$2")"
-MODE="$3"
-case "$MODE" in prepare|kernel|kernel_and_probe) ;; *) echo "Modo invalido" >&2; exit 2;; esac
+A17_STAGE="$3"
+case "$A17_STAGE" in prepare|kernel|kernel_and_probe) ;; *) echo "Modo invalido" >&2; exit 2;; esac
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTPUT="${A17_WORKDIR:-$RUNNER_TEMP/a17-build}"
 REPORT="${A17_REPORT_DIR:-$REPO_ROOT/a17-ci-results}"
 mkdir -p "$REPORT"
-printf '%s\n' "Mode: $MODE" "Kernel target: 6.12.38-android16-5-abA175FXXS7CZI4-4k" > "$REPORT/status.txt"
+printf '%s\n' "Build stage: $A17_STAGE" "Kernel target: 6.12.38-android16-5-abA175FXXS7CZI4-4k" > "$REPORT/status.txt"
 df -h . > "$REPORT/disk-before.txt"
 # The preparer verifies SHA256 of BOTH uploaded Samsung ZIPs; fail closed.
 bash "$REPO_ROOT/RTDriver-A17/scripts/prepare_official_a17.sh" "$BASE_ZIP" "$CZI4_ZIP" "$OUTPUT"
 cp "$OUTPUT/prepare-report.txt" "$REPORT/"
-if [[ "$MODE" == "prepare" ]]; then
+if [[ "$A17_STAGE" == "prepare" ]]; then
   echo "Source overlay prepared successfully. No compilation requested." | tee -a "$REPORT/status.txt"
   exit 0
 fi
@@ -86,6 +86,7 @@ export BUILD_CONFIG=../out/target/product/a17/obj/KERNEL_OBJ/build.config
 export OUT_DIR=../out/target/product/a17/obj/KLEAF_OBJ
 export DIST_DIR=../out/target/product/a17/obj/KLEAF_OBJ/dist
 export DEFCONFIG_OVERLAYS="entry_level.config sec_ogki_fragment.config mt6789_disable_mtk_charger_overlay.config mt6789_teegris_4_overlay.config"
+# Samsung's MODE=user controls its variant and must never overwrite A17_STAGE.
 export PROJECT=mgk_64_k612 ARCH=arm64 MODE=user
 export PATH="$(dirname "$CLANG_BIN"):$PATH"
 {
@@ -108,7 +109,7 @@ fi
 cp "$(head -n 1 "$REPORT/symvers-paths.txt")" "$REPORT/Module.symvers"
 echo 'Samsung kernel build generated Module.symvers' | tee -a "$REPORT/status.txt"
 
-if [[ "$MODE" == "kernel_and_probe" ]]; then
+if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
   SRC="$REPO_ROOT/RTDriver-A17/src"
   MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
   mkdir -p "$MOD"
@@ -144,5 +145,9 @@ if [[ "$MODE" == "kernel_and_probe" ]]; then
   fi
   sha256sum "$REPORT/a17_compat_probe.ko" > "$REPORT/probe-sha256.txt"
   echo 'ARM64 probe produced, NOT loaded or proven compatible in device.' | tee -a "$REPORT/status.txt"
+fi
+if [[ "$A17_STAGE" == "kernel_and_probe" && ! -s "$REPORT/a17_compat_probe.ko" ]]; then
+  echo 'ERROR: kernel_and_probe requested but there is no compiled compatibility probe.' | tee -a "$REPORT/status.txt" >&2
+  exit 39
 fi
 df -h . > "$REPORT/disk-after.txt"
