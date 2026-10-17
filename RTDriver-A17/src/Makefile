@@ -20,3 +20,4 @@ modules_install:
 
 clean:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M) O=$(O) clean
+endif
