@@ -1,6 +1,11 @@
 name: Build Galaxy A17 kernel 6.12 (MediaFire sources)
 
 on:
+  # User-requested one-shot build; remove immediately after launch.
+  push:
+    branches: [main]
+    paths:
+      - 'RTDriver-A17/build-requests/build-once-20261017-1601.txt'
   workflow_dispatch:
     inputs:
       mode:
