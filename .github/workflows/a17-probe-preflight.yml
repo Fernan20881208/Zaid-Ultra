@@ -1,0 +1,60 @@
+name: A17 probe Bazel analysis (NO compilation)
+
+on:
+  push:
+    paths:
+      - '.github/workflows/a17-probe-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a17-probe-preflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  analyze:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      A17_REPORT_DIR: ${{ github.workspace }}/a17-ci-results
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install prerequisites only
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            git git-lfs curl python3 rsync unzip tar xz-utils bc bison flex \
+            libssl-dev libelf-dev libncurses-dev dwarves cpio zip zstd \
+            build-essential cmake ninja-build clang lld binutils file kmod
+      - name: Download and validate exact Samsung source ZIPs
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/a17-input-sources" "$A17_REPORT_DIR"
+          python3 RTDriver-A17/scripts/download_mediafire_sources.py \
+            --out-dir "$RUNNER_TEMP/a17-input-sources" 2>&1 | tee "$A17_REPORT_DIR/source-download.log"
+      - name: Source validation and Bazel analysis (strictly no compile)
+        run: |
+          set -euo pipefail
+          SRC="$RUNNER_TEMP/a17-input-sources"
+          bash RTDriver-A17/scripts/ci_build_a17.sh \
+            "$SRC/SM-A175F_16_Opensource.zip" \
+            "$SRC/SM-A175F_16_Opensource_A175FXXS7CZI4_A175NKSS7CZI2.zip" \
+            preflight
+          grep -q "Preflight completed; intentionally no kernel or .ko built." "$A17_REPORT_DIR/status.txt"
+          test -s "$A17_REPORT_DIR/probe-analysis.log"
+          if [[ -e "$A17_REPORT_DIR/a17_compat_probe.ko" ]]; then
+            echo "Unexpected .ko in no-build preflight" >&2
+            exit 9
+          fi
+      - name: Always publish preflight diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a17-no-build-preflight-${{ github.run_number }}
+          path: a17-ci-results/
+          if-no-files-found: warn
+          retention-days: 14
