@@ -1,10 +1,14 @@
-# A17 RT · Primera fase de ABI nueva
+# A17 RT · port ABI parcial
 
-**Port parcial compilado:** [runtime/](runtime/README.md) añade un módulo
-separado `rt_a17` para READ_MEM, WRITE_MEM y MODULE_BASE con APIs exportadas
-del kernel y comprobaciones de permisos. El diagnóstico descrito aquí mantiene
-sus capacidades en cero. Prueba en el teléfono e integración del APK pendientes.
-[Build #39071647279: artefacto, modinfo, 45 CRC y hashes](../reports/rt-port-build-39071647279.md).
+`rt_a17_diag` sigue siendo un módulo de diagnóstico con capacidades cero.
+El módulo separado `rt_a17` v0.2 (ABI 3) compila operaciones de memoria
+acotadas, búsqueda de base de mapeo y breakpoints de hardware de un disparo.
+La compilación y los CRC contra el kernel generado pasaron en Actions
+**#39075095531**. Esto no demuestra KMI del teléfono, aceptación de firma,
+ejecución en SM-A175F ni integración con Zaid Hack.
+
+[Informe corregido, SHA-256, modinfo y artefacto descargable](../reports/rt-port-build-39075095531.md) ·
+[Implementación y límites](runtime/README.md).
 
 Origen: RTdriver_extracted_arm64.ko.
 SHA-256: 0df5b0e7710af752ab21306dcd1b4be3b40598c977ccd1de6b95fd43d0c8ba72.
@@ -75,5 +79,7 @@ Ni un nodo existente ni un campo de capacidades distinto de cero bastan para
 declarar que el RT Driver funciona. Las operaciones DWARF documentadas
 permanecen sin implementar y devuelven `-EOPNOTSUPP`.
 
-Este código permite implementar la detección de capacidades en una app
-futura; no reemplaza el protocolo privado del controlador original.
+El cliente fuente reconoce ABI 1 (diagnóstico), ABI 2 (memoria) y ABI 3
+(memoria y breakpoints), y distingue estados sin declarar funciones verificadas.
+No se integró dentro del APK: los archivos disponibles contienen APK/DEX y
+assets binarios, no el código fuente mantenible de la aplicación.

@@ -79,6 +79,9 @@ else: print("controlled tool fixture")
             self.assertEqual(result["implemented_original_opcodes"],
                              ["0x801", "0x802", "0x803", "0x805", "0x806"])
             self.assertFalse(result["original_rt_fully_implemented"])
+            report_text = (report / "rt-port-report.md").read_text()
+            self.assertIn("one-shot hardware breakpoints/hit queue", report_text)
+            self.assertNotIn("breakpoint operations remain unsupported", report_text)
 
     def test_relocatable_aarch64_required(self):
         elf = bytearray(64)

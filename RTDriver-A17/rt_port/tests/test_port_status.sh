@@ -35,9 +35,13 @@ int __wrap_ioctl(int fd, unsigned long op, ...)
     struct rt_a17_info *info = va_arg(ap, struct rt_a17_info *);
     va_end(ap);
     int diagnostic = s == 2 || s == 10;
-    info->abi = s == 4 ? 99 : diagnostic ? RT_A17_ABI_VERSION : RT_A17_PORT_ABI_VERSION;
-    info->capabilities = diagnostic ? 0 : s == 5 ? 0x80 : RT_A17_PORT_CAPS;
-    info->original_ioctls_implemented = diagnostic ? 0 : s == 6 ? 0 : RT_A17_PORT_OPS;
+    info->abi = s == 4 ? 99 : diagnostic ? RT_A17_ABI_VERSION :
+                (s == 12 || s == 13) ? RT_A17_PORT_MEMORY_ABI_VERSION : RT_A17_PORT_ABI_VERSION;
+    info->capabilities = diagnostic ? 0 : s == 5 ? 0x80 : s == 12 ? RT_A17_MEMORY_CAPS :
+                         s == 13 ? (RT_A17_MEMORY_CAPS | 0x80) : RT_A17_PORT_CAPS;
+    info->original_ioctls_implemented = diagnostic ? 0 : s == 6 ? 0 :
+                                       s == 12 ? RT_A17_MEMORY_OPS :
+                                       s == 13 ? RT_A17_MEMORY_OPS : RT_A17_PORT_OPS;
     info->reserved = s == 7 ? 1 : 0;
     return s == 11 ? 1 : 0;
 }
@@ -45,12 +49,12 @@ C
 cc -D_GNU_SOURCE -std=gnu11 -Wall -Wextra -Werror -I"$ROOT" \
   "$ROOT/tools/rt_a17_port_status.c" "$ROOT/tools/rt_a17_client.c" "$TMP/syscalls.c" \
   -Wl,--wrap=open,--wrap=ioctl,--wrap=close -o "$TMP/status"
-for scenario in {0..11}; do
+for scenario in {0..13}; do
   case "$scenario" in
     0) expected=2; state=absent;;
     1|9) expected=5; state=inaccessible;;
     2|10) expected=4; state=diagnostic;;
-    3) expected=6; state=partial_unverified;;
+    3|12) expected=6; state=partial_unverified;;
     *) expected=3; state=compatibility_error;;
   esac
   rc=0
@@ -63,4 +67,4 @@ assert data['state'] == sys.argv[2], data
 assert data['functional_verified'] is False, data
 PY
 done
-echo 'Port status: 12 capability/error/fallback scenarios passed; no verified-state fabrication.'
+echo 'Port status: 14 capability/error/fallback scenarios passed; no verified-state fabrication.'

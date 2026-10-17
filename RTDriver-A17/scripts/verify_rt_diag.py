@@ -170,10 +170,22 @@ def main():
         result["errors"].append("Inconsistent module signature metadata")
     result["build_checks_passed"] = not result["errors"]
     (report / f"{prefix}-verification.json").write_text(json.dumps(result, indent=2) + "\n")
-    description = (["Partial port: original 0x801/0x802/0x803 implemented for bounded data-memory",
-                    "read/write and file-mapping base lookup. Original key, gyro and breakpoint",
-                    "operations remain unsupported. Device execution and original app unverified."]
-                   if runtime else
+    if runtime:
+        version = result["checks"].get("version")
+        if version == "0.2":
+            description = ["Partial port v0.2 (ABI 3): bounded data-memory read/write, file-mapping",
+                           "base lookup, and per-descriptor one-shot hardware breakpoints/hit queue",
+                           "(0x805/0x806). INIT_KEY and GYRO_CONFIG remain unsupported. Device",
+                           "execution and original app integration are unverified."]
+        elif version == "0.1":
+            description = ["Partial port v0.1 (ABI 2): bounded data-memory read/write and file-mapping",
+                           "base lookup (0x801/0x802/0x803). Breakpoint, key and gyro operations are",
+                           "not implemented in this version. Device and original app are unverified."]
+        else:
+            description = ["Partial RT port; module version was not recognized. Device execution and",
+                           "original app integration are unverified."]
+    else:
+        description = (
                    ["This is a newly compiled diagnostic module. Original RT memory and breakpoint",
                     "operations are not implemented."])
     lines = [f"# Samsung A17 {args.module_name} build verification", "",
