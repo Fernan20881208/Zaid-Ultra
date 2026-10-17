@@ -1,0 +1,17 @@
+{
+  "mode": "kernel_and_rt_port",
+  "source_commit": "504662d26d72ad20c1b6b32ee08f6d412a764b5b",
+  "expected_kernel_release": "6.12.38-android16-5-abA175FXXS7CZI4-4k",
+  "static_checks_run": "https://github.com/Fernan20881208/Zaid-Ultra/actions/runs/39071596609",
+  "scope": [
+    "Build official Samsung kernel once after static tests and Bazel --nobuild pass",
+    "Build unchanged diagnostic module and separate partial RT port",
+    "Publish ELF, vermagic, CRC, signature, hash reports and manual Android tools"
+  ],
+  "unverified": [
+    "device KMI and signature acceptance",
+    "original APK integration",
+    "original key, gyro and breakpoint operations"
+  ],
+  "load_or_modify_phone": false
+}
