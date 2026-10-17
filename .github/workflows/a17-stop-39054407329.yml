@@ -1,0 +1,19 @@
+name: Stop A17 build 39054407329
+on:
+  push:
+    paths:
+      - '.github/workflows/a17-stop-39054407329.yml'
+permissions:
+  contents: read
+# This exact concurrency group matches the active full kernel build on main.
+# A newer run with cancel-in-progress requests cancellation of the old run.
+concurrency:
+  group: a17-samsung-6.12-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  request-cancel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Mark no-build cancellation signal
+        run: echo "User requested cancellation of the previous A17 kernel build. No kernel compilation."
