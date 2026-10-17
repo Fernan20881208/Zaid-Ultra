@@ -1,0 +1,11 @@
+{
+  "mode": "kernel_and_rt_diag",
+  "target": "6.12.38-android16-5-abA175FXXS7CZI4-4k",
+  "source_commit": "fafcef503ea50745a22ab83c2996d2beb08c2cb9",
+  "preflight_run": 39056637083,
+  "preflight_conclusion": "success",
+  "static_run": 39057669609,
+  "static_conclusion": "success",
+  "scope": "Compile official Samsung kernel target and new diagnostic module only. Do not load, install, reboot or modify a phone.",
+  "requested_at": "2026-10-17T18:25:00Z"
+}
