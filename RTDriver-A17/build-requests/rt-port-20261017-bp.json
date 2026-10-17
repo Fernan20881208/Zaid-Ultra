@@ -1,0 +1,5 @@
+{
+  "mode": "kernel_and_rt_port",
+  "source_commit": "0e2951f4235817703b6319ef220c3379f351e915",
+  "reason": "Build ABI 3 partial RT port with bounded one-shot breakpoints; static checks passed and previous Samsung Kleaf --nobuild preflight passed."
+}
