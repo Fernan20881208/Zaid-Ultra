@@ -31,7 +31,7 @@ El reporte de diagnóstico del dispositivo encontró:
 
 ## Bloqueador para compilar .ko ARM64
 
-La fuente oficial requiere toolchain/prebuilts externos (Clang Android 19.0.1 r536225, Bazel/Kleaf, AOSP/Samsung) y **un build correcto del kernel del equipo** para producir `Module.symvers` con CRC reales. Este entorno dispone de Clang 17 y no trae los prebuilts; por eso **no se intentó declarar que el driver es compatible**. Incluso al obtener `Module.symvers`, faltaría el código fuente del RT Driver original: el binario 6.1.112 no puede convertirse directamente en el driver 6.12 cambiando `vermagic`.
+**Actualización 2026-10-17:** el build de fuentes oficiales Linux 6.12.38 con Clang Android 19.0.1 (r536225) **ya terminó exitosamente** en GitHub Actions #39000648253 y #39000654437, generando `Module.symvers` auténtico y numerosos módulos de kernel Samsung. Todavía **no** tenemos un `a17_compat_probe.ko` compilado/verificado ni prueba de KMI/ABI idéntico al kernel instalado. Falta el código fuente del RT Driver original 6.1.112; no se porta modificando `vermagic`.
 
 El módulo de prueba `src/a17_compat_probe.c` no implementa acceso a memoria ajena, breakpoints ni interfaces privilegiadas; permitirá comprobar el ABI solo cuando tengamos el entorno de build completo. Compilarlo requiere un árbol preparado con `Module.symvers` y `.config` auténticos:
 ```bash
@@ -58,7 +58,9 @@ SHA-256 esperados:
 
 ### Modos de compilación
 
-- **push** a la definición del workflow o al descargador: se ejecuta **kernel_and_probe** automáticamente (intento completo), previa descarga y verificación de fuentes.
+- **No hay compilaciones completas automáticas por push.** Las compilaciones del kernel son manuales mientras se realiza la auditoría.
+- **Preflight independiente**: [a17-probe-preflight.yml](../../.github/workflows/a17-probe-preflight.yml) solo analiza el objetivo Bazel con `--nobuild`; no ejecuta la compilación del kernel.
+- **workflow_dispatch / preflight** (predeterminado): descarga, prepara, verifica el entorno Samsung y ejecuta análisis Bazel `--nobuild`, sin producir `.ko`.
 - **workflow_dispatch / prepare**: descarga, verifica SHA y prepara fuentes con 21 cambios CZI4.
 - **workflow_dispatch / kernel**: adicionalmente intenta compilar el kernel Samsung, recuperar toolchain Clang 19.0.1 r536225 y producir `Module.symvers`.
 - **workflow_dispatch / kernel_and_probe**: además intenta crear el `a17_compat_probe.ko` con Kleaf, una prueba de ABI **que no es el RT Driver**.
@@ -68,3 +70,12 @@ La salida se publica en artifacts de Actions bajo `a17-mediafire-build-report-<n
 **Advertencia:** MediaFire puede restringir las descargas automatizadas, exigir CAPTCHA o devolver HTML. Si ocurre, la descarga falla de forma explícita y hay que usar un origen de archivos que permita descargas sin interacción.
 
 Las fuentes de Samsung no contienen el código fuente del RT Driver original y **no se ha verificado todavía un módulo funcional para el teléfono**. No se ejecutan flasheos, root, ni `insmod`.
+
+### Auditoría de seguridad y trazabilidad (2026-10-17)
+
+- El fallo #39011401897 se produjo en `BazelWorkspaceStatusAction`: el workspace extraído carece de Git y faltaba el `SOURCE_DATE_EPOCH` oficial para la segunda llamada a Bazel.
+- Se volvió a generar `build.config` utilizando fuentes originales Samsung de la misma versión y se ejecutó `_setup_env.sh`: `KERNEL_VERSION=kernel-6.12`, `KERNEL_BUILD_VARIANT=user`, `SOURCE_DATE_EPOCH=0`. La prueba local `probe_preflight.sh` pasó sin compilar código. Durante el `source` se desactiva temporalmente `set -u`, puesto que Samsung utiliza variables opcionales sin definir.
+- El comando Bazel del módulo se alinea con los flags del `kernel_device_modules-6.12/build.sh` oficial. La nueva etapa `preflight` debe completar el análisis `--nobuild` **antes** de considerar otra compilación del kernel.
+- La ejecución fallida #39011401897 incluía **11** rutas de `Module.symvers`; antes se elegía una ruta temporal arbitraria. Ahora solo se permite la salida del target `mgk_64_k612_kernel_aarch64.user`, y se registra su SHA-256.
+- La salida del probe debe localizarse como un único `a17_compat_probe.ko`, verificarse como ELF AArch64, examinar `modinfo`, y comparar estrictamente el primer token de `vermagic` con `6.12.38-android16-5-abA175FXXS7CZI4-4k`.
+- **Pendiente**: resultado del preflight Bazel real, salida del probe compilado, KMI/CRC contrastados con el kernel instalado, estabilidad de carga, y el código funcional del RT Driver. No usar `insmod` ni afirmar compatibilidad hasta cerrar esos puntos.
