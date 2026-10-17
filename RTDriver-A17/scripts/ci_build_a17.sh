@@ -217,6 +217,11 @@ if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
     echo 'ERROR: Probe not ELF AArch64' | tee -a "$REPORT/status.txt" >&2
     exit 35
   fi
+  # Cross-check embedded __versions CRCs with this build's Module.symvers.
+  # This does not establish compatibility with the device's running kernel.
+  bash "$REPO_ROOT/RTDriver-A17/scripts/verify_module_crc.sh" \
+    "$REPORT/a17_compat_probe.ko" "$REPORT/Module.symvers" \
+    2>&1 | tee "$REPORT/probe-crc-check.txt"
   # Preserve a verifiable diagnostic .ko even when the exact release differs.
   # Refuse to claim compatibility based on the kernel version alone.
   if ! command -v modinfo >/dev/null; then
