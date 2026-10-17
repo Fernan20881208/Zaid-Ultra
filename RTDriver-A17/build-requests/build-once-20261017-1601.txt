@@ -1,0 +1,7 @@
+One-shot user-authorized build: Samsung Galaxy A17 SM-A175F
+Mode: kernel_and_probe
+Kernel target: 6.12.38-android16-5-abA175FXXS7CZI4-4k
+Reference static test: #39047105985 SUCCESS
+Actual .ko built by Bazel previously in #39041316430; artifact selector fixed
+Collect exact nested bazel-bin output; test ELF AArch64 and vermagic; report module signature
+Do not insert kernel modules, flash partitions, or alter the phone
