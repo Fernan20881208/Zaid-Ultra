@@ -33,7 +33,7 @@ class Tests(unittest.TestCase):
 import os,sys
 name=os.path.basename(sys.argv[0])
 if name == "modinfo":
-    fields={"name":"rt_a17_diag", "vermagic":os.environ["FIXTURE_MAGIC"]}
+    fields={"name":os.environ.get("FIXTURE_NAME", "rt_a17_diag"), "vermagic":os.environ["FIXTURE_MAGIC"]}
     print(fields.get(sys.argv[2], "") if "-F" in sys.argv else "name: rt_a17_diag")
 elif name == "modprobe": print("0x12345678 module_layout")
 else: print("controlled tool fixture")
@@ -58,6 +58,15 @@ else: print("controlled tool fixture")
             self.assertFalse(result["build_checks_passed"])
             self.assertIn("vermagic", " ".join(result["errors"]))
             self.assertEqual((report / "rt_a17_diag.ko").read_bytes(), elf)
+            (report / "rt_a17.ko").write_bytes(elf)
+            env.update(FIXTURE_NAME="rt_a17", FIXTURE_MAGIC=verify.TARGET + " modversions aarch64")
+            port = subprocess.run(command + ["--module-name", "rt_a17"], env=env,
+                                  capture_output=True, text=True)
+            self.assertEqual(port.returncode, 0, port.stdout + port.stderr)
+            result = json.loads((report / "rt-port-verification.json").read_text())
+            self.assertFalse(result["original_rt_fully_implemented"])
+            self.assertFalse(result["device_operations_tested"])
+            self.assertEqual(result["implemented_original_opcodes"], ["0x801", "0x802", "0x803"])
 
     def test_relocatable_aarch64_required(self):
         elf = bytearray(64)

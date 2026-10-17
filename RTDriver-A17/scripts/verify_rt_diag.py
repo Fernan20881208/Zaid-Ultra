@@ -53,13 +53,21 @@ def main():
     parser.add_argument("--report-dir", type=Path, required=True)
     parser.add_argument("--kernel-artifact-dir", type=Path, required=True)
     parser.add_argument("--config-dir", type=Path, required=True)
+    parser.add_argument("--module-name", choices=("rt_a17_diag", "rt_a17"), default="rt_a17_diag")
     args = parser.parse_args()
     report = args.report_dir.resolve()
     report.mkdir(parents=True, exist_ok=True)
-    ko = report / "rt_a17_diag.ko"
+    ko = report / (args.module_name + ".ko")
+    runtime = args.module_name == "rt_a17"
+    prefix = "rt-port" if runtime else "rt-diag"
     result = {"expected_release": TARGET, "checks": {}, "errors": [],
               "device_abi_verified": False, "device_signature_acceptance_verified": False,
               "original_rt_functions_implemented": False}
+    if runtime:
+        del result["original_rt_functions_implemented"]
+        result["original_rt_fully_implemented"] = False
+        result["implemented_original_opcodes"] = ["0x801", "0x802", "0x803"]
+        result["device_operations_tested"] = False
 
     def check(name, fn):
         try:
@@ -79,18 +87,18 @@ def main():
         data = ko.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         result["sha256"] = digest
-        (report / "rt-diag-sha256.txt").write_text(f"{digest}  rt_a17_diag.ko\n")
+        (report / f"{prefix}-sha256.txt").write_text(f"{digest}  {ko.name}\n")
         result["signature_trailer_present"] = data.endswith(b"~Module signature appended~\n")
         return elf_header(data)
 
     check("elf", binary)
-    check("file", lambda: command("rt-diag-file.txt", ["file", str(ko)]))
-    check("readelf", lambda: command("rt-diag-elf-header.txt", ["readelf", "-h", str(ko)]))
-    check("modinfo", lambda: command("rt-diag-modinfo.txt", ["modinfo", str(ko)]))
+    check("file", lambda: command(f"{prefix}-file.txt", ["file", str(ko)]))
+    check("readelf", lambda: command(f"{prefix}-elf-header.txt", ["readelf", "-h", str(ko)]))
+    check("modinfo", lambda: command(f"{prefix}-modinfo.txt", ["modinfo", str(ko)]))
     for field in ("name", "vermagic", "depends", "signer", "sig_key", "sig_hashalgo"):
-        check(field, lambda field=field: command(f"rt-diag-{field}.txt",
+        check(field, lambda field=field: command(f"{prefix}-{field}.txt",
                                                 ["modinfo", "-F", field, str(ko)]))
-    check("symbols", lambda: command("rt-diag-symbols.txt", ["readelf", "-Ws", str(ko)]))
+    check("symbols", lambda: command(f"{prefix}-symbols.txt", ["readelf", "-Ws", str(ko)]))
 
     def config_and_release():
         config_path = args.config_dir / "out_dir/.config"
@@ -123,14 +131,14 @@ def main():
     check("config_and_release", config_and_release)
 
     def dependencies():
-        if result["checks"].get("name") != "rt_a17_diag":
+        if result["checks"].get("name") != args.module_name:
             raise ValueError("Unexpected module name")
         if result["checks"].get("depends") != "":
             raise ValueError("Unexpected external module dependencies")
         return "No external module dependencies; imported kernel symbols checked by CRC"
 
     check("dependencies", dependencies)
-    check("crc", lambda: command("rt-diag-crc.txt", ["bash", str(Path(__file__).with_name(
+    check("crc", lambda: command(f"{prefix}-crc.txt", ["bash", str(Path(__file__).with_name(
         "verify_module_crc.sh")), str(ko), str(report / "Module.symvers")]))
     symvers = report / "Module.symvers"
     if symvers.is_file():
@@ -143,18 +151,23 @@ def main():
     if bool(signer or key) != bool(result.get("signature_trailer_present")):
         result["errors"].append("Inconsistent module signature metadata")
     result["build_checks_passed"] = not result["errors"]
-    (report / "rt-diag-verification.json").write_text(json.dumps(result, indent=2) + "\n")
-    lines = ["# Samsung A17 RT diagnostic build verification", "",
+    (report / f"{prefix}-verification.json").write_text(json.dumps(result, indent=2) + "\n")
+    description = (["Partial port: original 0x801/0x802/0x803 implemented for bounded data-memory",
+                    "read/write and file-mapping base lookup. Original key, gyro and breakpoint",
+                    "operations remain unsupported. Device execution and original app unverified."]
+                   if runtime else
+                   ["This is a newly compiled diagnostic module. Original RT memory and breakpoint",
+                    "operations are not implemented."])
+    lines = [f"# Samsung A17 {args.module_name} build verification", "",
              f"Build checks passed: **{result['build_checks_passed']}**",
              f"SHA-256: `{result.get('sha256', 'unavailable')}`",
              f"Vermagic: `{result['checks'].get('vermagic', 'unavailable')}`",
              f"Signature: **{result['signature_state']}**", "",
-             "This is a newly compiled diagnostic module. Original RT memory and breakpoint",
-             "operations are not implemented. No module was loaded or installed.",
+             *description, "No module was loaded or installed.",
              "CRC comparison covers this build's Module.symvers; the running phone's KMI/ABI",
              "and signature acceptance are unverified.", "", "## Errors", ""]
     lines.extend([f"- {e}" for e in result["errors"]] or ["None in build checks."])
-    (report / "rt-diag-report.md").write_text("\n".join(lines) + "\n")
+    (report / f"{prefix}-report.md").write_text("\n".join(lines) + "\n")
     print(json.dumps({k: v for k, v in result.items() if k != "checks"}, indent=2))
     return 0 if result["build_checks_passed"] else 46
 

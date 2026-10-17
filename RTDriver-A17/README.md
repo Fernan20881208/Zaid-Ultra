@@ -2,6 +2,10 @@
 
 **Objetivo:** Android 16, KernelSU, kernel `6.12.38-android16-5-abA175FXXS7CZI4-4k`.
 
+**Trabajo nuevo:** [primer port parcial RT](rt_port/runtime/README.md), separado
+del diagnóstico. Implementa READ_MEM, WRITE_MEM y MODULE_BASE en código nuevo;
+breakpoints, inicialización privada y ejecución en el teléfono siguen pendientes.
+
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
 como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,
 8 CRC coincidentes con el Module.symvers generado, sin firma. Es solo diagnóstico;

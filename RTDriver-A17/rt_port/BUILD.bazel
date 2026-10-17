@@ -1,5 +1,8 @@
 load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
 
+# Shared recovered layout; the separate runtime package uses this same file.
+exports_files(["rt_abi.h"], visibility = ["//visibility:public"])
+
 # Safe port ABI staging target: status/permission diagnostics only.
 # Memory operations and hardware-breakpoint controls are not implemented.
 kernel_module(

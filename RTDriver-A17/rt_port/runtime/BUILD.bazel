@@ -1,0 +1,14 @@
+load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
+
+# Separate from the diagnostic-only module; no original key/gyro/BP support.
+kernel_module(
+    name = "rt_a17",
+    srcs = [
+        "rt_a17.c",
+        "rt_port_abi.h",
+        "Makefile",
+        "//kernel_device_modules-6.12/rt_a17_diag:rt_abi.h",
+    ],
+    outs = ["rt_a17.ko"],
+    kernel_build = "//kernel_device_modules-6.12:mgk_64_k612_kernel_aarch64.user",
+)

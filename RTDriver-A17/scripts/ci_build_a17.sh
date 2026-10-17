@@ -2,13 +2,13 @@
 # Samsung SM-A175F 6.12.38 build attempt on GitHub Actions, no flashing/loading.
 set -euo pipefail
 if [[ $# -ne 3 ]]; then
-  echo "Uso: bash ci_build_a17.sh BASE_ZIP CZI4_ZIP prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag" >&2
+  echo "Uso: bash ci_build_a17.sh BASE_ZIP CZI4_ZIP prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag|kernel_and_rt_port" >&2
   exit 2
 fi
 BASE_ZIP="$(realpath "$1")"
 CZI4_ZIP="$(realpath "$2")"
 A17_STAGE="$3"
-case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag) ;; *) echo "Modo invalido" >&2; exit 2;; esac
+case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag|kernel_and_rt_port) ;; *) echo "Modo invalido" >&2; exit 2;; esac
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTPUT="${A17_WORKDIR:-$RUNNER_TEMP/a17-build}"
 REPORT="${A17_REPORT_DIR:-$REPO_ROOT/a17-ci-results}"
@@ -105,7 +105,7 @@ export PATH="$(dirname "$CLANG_BIN"):$PATH"
 # Preflight the probe target and the ORIGINAL Samsung workspace-status command
 # before starting the expensive kernel build. --nobuild analyzes Bazel rules
 # but does not compile C/C++, build kernel images, or emit any .ko.
-if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" || "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
+if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" || "$A17_STAGE" == "kernel_and_rt_diag" || "$A17_STAGE" == "kernel_and_rt_port" ]]; then
   SRC="$REPO_ROOT/RTDriver-A17/src"
   MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
   mkdir -p "$MOD"
@@ -117,6 +117,9 @@ if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" || "$A17
   mkdir -p "$RT_MOD"
   cp "$RT_SRC/rt_a17_diag.c" "$RT_SRC/rt_abi.h" \
      "$RT_SRC/Makefile" "$RT_SRC/BUILD.bazel" "$RT_MOD/"
+  mkdir -p "$RT_MOD/runtime"
+  cp "$RT_SRC/runtime/rt_a17.c" "$RT_SRC/runtime/rt_port_abi.h" \
+     "$RT_SRC/runtime/Makefile" "$RT_SRC/runtime/BUILD.bazel" "$RT_MOD/runtime/"
   bash "$REPO_ROOT/RTDriver-A17/scripts/probe_preflight.sh" "$KROOT" "$BUILD_CONFIG" \
     2>&1 | tee "$REPORT/probe-source-preflight.log"
   (
@@ -139,19 +142,24 @@ if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" || "$A17
       --experimental_optimize_ddk_config_actions \
       --user_ddk_unsafe_headers=//kernel_device_modules-6.12:mtk_use_gki_unsafe_headers \
       //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe \
-      //kernel_device_modules-6.12/rt_a17_diag:rt_a17_diag
+      //kernel_device_modules-6.12/rt_a17_diag:rt_a17_diag \
+      //kernel_device_modules-6.12/rt_a17_diag/runtime:rt_a17
   ) 2>&1 | tee "$REPORT/probe-analysis.log"
-  echo "Bazel probe and new RT diagnostic targets analyzed without compilation." | tee -a "$REPORT/status.txt"
+  echo "Bazel probe, RT diagnostic and partial runtime targets analyzed without compilation." | tee -a "$REPORT/status.txt"
   if [[ "$A17_STAGE" == "preflight" ]]; then
     echo "Preflight completed; intentionally no kernel or .ko built." | tee -a "$REPORT/status.txt"
     exit 0
   fi
 fi
 
-if [[ "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
+if [[ "$A17_STAGE" == "kernel_and_rt_diag" || "$A17_STAGE" == "kernel_and_rt_port" ]]; then
   # The official build.sh also builds every customer/vendor module and dist.
   # Use its exact environment and flags for just its kernel target plus our
   # external diagnostic target; do not change Samsung's kernel configuration.
+  RT_TARGETS=(//kernel_device_modules-6.12/rt_a17_diag:rt_a17_diag)
+  if [[ "$A17_STAGE" == "kernel_and_rt_port" ]]; then
+    RT_TARGETS+=(//kernel_device_modules-6.12/rt_a17_diag/runtime:rt_a17)
+  fi
   (
     cd "$KROOT"
     set +u
@@ -173,7 +181,7 @@ if [[ "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
       --experimental_optimize_ddk_config_actions \
       --user_ddk_unsafe_headers=//kernel_device_modules-6.12:mtk_use_gki_unsafe_headers \
       //kernel_device_modules-6.12:mgk_64_k612_kernel_aarch64.user \
-      //kernel_device_modules-6.12/rt_a17_diag:rt_a17_diag
+      "${RT_TARGETS[@]}"
   ) 2>&1 | tee "$REPORT/rt-diag-build.log"
 else
   (
@@ -204,7 +212,7 @@ sha256sum "$REPORT/Module.symvers" > "$REPORT/module-symvers-sha256.txt"
 wc -l "$REPORT/Module.symvers" > "$REPORT/module-symvers-lines.txt"
 echo 'Samsung kernel build generated canonical kernel_build Module.symvers (device ABI still unverified).' | tee -a "$REPORT/status.txt"
 
-if [[ "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
+if [[ "$A17_STAGE" == "kernel_and_rt_diag" || "$A17_STAGE" == "kernel_and_rt_port" ]]; then
   bash "$REPO_ROOT/RTDriver-A17/rt_port/collect_diag.sh" \
     "$KROOT" "$OUTPUT/Kernel/out" "$REPORT" \
     2>&1 | tee "$REPORT/rt-diag-collection.log"
@@ -213,6 +221,29 @@ if [[ "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
     --config-dir "$(dirname "$CANONICAL_SYMVERS")_config" \
     2>&1 | tee "$REPORT/rt-diag-verification.log"
   echo "RT diagnostic build checks passed. Running-device ABI, signature acceptance and RT functionality remain unverified." | tee -a "$REPORT/status.txt"
+fi
+
+if [[ "$A17_STAGE" == "kernel_and_rt_port" ]]; then
+  bash "$REPO_ROOT/RTDriver-A17/rt_port/collect_runtime.sh" \
+    "$KROOT" "$OUTPUT/Kernel/out" "$REPORT" \
+    2>&1 | tee "$REPORT/rt-port-collection.log"
+  python3 "$REPO_ROOT/RTDriver-A17/scripts/verify_rt_diag.py" \
+    --module-name rt_a17 --report-dir "$REPORT" \
+    --kernel-artifact-dir "$(dirname "$CANONICAL_SYMVERS")" \
+    --config-dir "$(dirname "$CANONICAL_SYMVERS")_config" \
+    2>&1 | tee "$REPORT/rt-port-verification.log"
+  NDK_CC="$KROOT/prebuilts/ndk-r26/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang"
+  [[ -x "$NDK_CC" ]] || { echo 'Missing Android NDK r26 compiler for manual tools' >&2; exit 47; }
+  "$NDK_CC" --version > "$REPORT/rt-port-userspace-compiler.txt"
+  for tool in rt_a17_port_status rt_a17_selftest; do
+    "$NDK_CC" -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Werror -O2 -static \
+      "$RT_SRC/tools/$tool.c" "$RT_SRC/tools/rt_a17_client.c" \
+      -o "$REPORT/$tool"
+    readelf -h "$REPORT/$tool" > "$REPORT/$tool-elf.txt"
+    grep -q 'AArch64' "$REPORT/$tool-elf.txt"
+    sha256sum "$REPORT/$tool" >> "$REPORT/rt-port-tools-sha256.txt"
+  done
+  echo 'Partial RT port build verified; no device tests or original-app integration claimed.' | tee -a "$REPORT/status.txt"
 fi
 
 if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
