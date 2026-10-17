@@ -16,4 +16,7 @@ _Static_assert(offsetof(struct rt_breakpoint_ctl, len) == 24, "HW_BREAKPOINT_CTL
 _Static_assert(sizeof(struct rt_breakpoint_hits) == 16, "HW_BREAKPOINT_GET_HITS_CTL 16");
 _Static_assert(RT_OP_INIT_KEY == 0x800, "init key opcode");
 _Static_assert(RT_OP_BP_CONTROL == 0x806, "bp opcode");
+_Static_assert(sizeof(struct rt_a17_info) == 16, "diagnostic info ABI");
+_Static_assert(RT_A17_INFO == 0x900, "diagnostic opcode");
+_Static_assert(RT_A17_ABI_VERSION == 1, "diagnostic ABI revision");
 int main(void) { return 0; }

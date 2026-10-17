@@ -58,12 +58,24 @@ SHA-256 esperados:
 
 ### Modos de compilación
 
-- **No hay compilaciones completas automáticas por push.** Las compilaciones del kernel son manuales mientras se realiza la auditoría.
+- Las modificaciones normales de código **no** inician compilaciones completas.
+  Una solicitud explícita nueva `build-requests/rt-diag-*.json` puede iniciar
+  una sola ejecución `kernel_and_rt_diag`; primero exige pruebas estáticas y
+  análisis Bazel `--nobuild`. También se conserva `workflow_dispatch`.
 - **Preflight independiente**: [a17-probe-preflight.yml](../../.github/workflows/a17-probe-preflight.yml) solo analiza el objetivo Bazel con `--nobuild`; no ejecuta la compilación del kernel.
 - **workflow_dispatch / preflight** (predeterminado): descarga, prepara, verifica el entorno Samsung y ejecuta análisis Bazel `--nobuild`, sin producir `.ko`.
 - **workflow_dispatch / prepare**: descarga, verifica SHA y prepara fuentes con 21 cambios CZI4.
 - **workflow_dispatch / kernel**: adicionalmente intenta compilar el kernel Samsung, recuperar toolchain Clang 19.0.1 r536225 y producir `Module.symvers`.
 - **workflow_dispatch / kernel_and_probe**: además intenta crear el `a17_compat_probe.ko` con Kleaf, una prueba de ABI **que no es el RT Driver**.
+- **kernel_and_rt_diag**: compila el target oficial Samsung
+  `mgk_64_k612_kernel_aarch64.user` y el módulo nuevo `rt_a17_diag` en la
+  misma invocación Bazel, con los flags del `build.sh` original. Evita
+  compilar los módulos vendor y distribuir imágenes que este diagnóstico
+  no necesita. No modifica la configuración de firma ni las protecciones.
+
+El artefacto incluye `rt-diag-report.md` y `rt-diag-verification.json`,
+`modinfo`, ELF, CRCs contra `Module.symvers`, SHA-256, `kernel.config` y
+`kernel.release`. Una verificación fallida conserva el `.ko` como diagnóstico.
 
 La salida se publica en artifacts de Actions bajo `a17-mediafire-build-report-<numero>` incluso si el trabajo falla.
 

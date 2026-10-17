@@ -21,7 +21,8 @@ Este módulo de diagnóstico solo permite leer una estructura de capacidades
 a través del comando 0x900. Las operaciones originales 0x800 a 0x806
 devuelven explícitamente -EOPNOTSUPP.
 
-ESTADO: fuente nuevo preparado, no compilado ni probado sobre el A17.
+ESTADO: auditoría de integración actualizada; consultar el informe de la
+ejecución de Actions para el resultado de compilación. No probado sobre el A17.
 No es el RT Driver original ni un reemplazo funcional para Zaid Hack.
 El cliente y su protocolo de inicialización siguen sin verificar.
 
@@ -50,8 +51,21 @@ firma o compatibilidad con los símbolos reales del kernel instalado.
 `tools/rt_a17_status.c` consulta el comando nuevo `0x900`.
 El controlador devuelve `original_ioctls_implemented=0` y
 `capabilities=0`; el cliente marca la situación como
-**solo diagnóstico** con código de salida 4, en lugar de indicar
-falsamente que el RT Driver original está activo.
+**solo diagnóstico** con código de salida 4. Emite JSON para que una app
+pueda consumir el resultado sin interpretar mensajes de consola.
+
+| `state` | Salida | Interpretación |
+| --- | --- | --- |
+| `absent` | 2 | Nodo ausente o dispositivo ya retirado |
+| `diagnostic` | 4 | ABI 1 reconocido, capacidades y operaciones originales en cero |
+| `compatibility_error` | 3 | IOCTL no reconocido, ABI distinta o campos inconsistentes |
+| `inaccessible` | 5 | Acceso denegado u otro fallo al abrir el nodo; no implica ausencia |
+| `functional_verified` | Reservado | No lo emite esta versión; requiere implementación y pruebas funcionales independientes |
+
+`functional_verified` es siempre `false` en el JSON de este cliente.
+Ni un nodo existente ni un campo de capacidades distinto de cero bastan para
+declarar que el RT Driver funciona. Las operaciones DWARF documentadas
+permanecen sin implementar y devuelven `-EOPNOTSUPP`.
 
 Este código permite implementar la detección de capacidades en una app
 futura; no reemplaza el protocolo privado del controlador original.

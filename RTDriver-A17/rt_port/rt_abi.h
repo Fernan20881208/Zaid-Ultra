@@ -18,5 +18,8 @@ struct rt_module_base { __s32 pid; __u32 pad; __u64 name; __u64 base; };
 struct rt_breakpoint_ctl { __s32 pid; __u32 pad; __u64 addr; __s32 action; __s32 type; __s32 len; __u32 pad2; };
 struct rt_breakpoint_hits { __u64 buffer; __u64 count; };
 #define RT_A17_INFO 0x900
+#define RT_A17_ABI_VERSION 1
+/* ABI 1 implements diagnostics only. Nonzero capability/operation/reserved
+ * fields require a future protocol and independent functional validation. */
 struct rt_a17_info { __u32 abi; __u32 capabilities; __u32 original_ioctls_implemented; __u32 reserved; };
 #endif

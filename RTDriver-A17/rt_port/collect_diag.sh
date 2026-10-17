@@ -13,7 +13,8 @@ if [[ -s "$EXPECTED" ]]; then
   FOUND="$(realpath "$EXPECTED")"
 else
   mapfile -t matches < <(find "$KOUT" -type f -size +0c \
-    -path "*/execroot/_main/bazel-out/*/bin/kernel_device_modules-6.12/rt_a17_diag/rt_a17_diag/rt_a17_diag.ko" | sort -u)
+    -path "*/execroot/_main/bazel-out/*/bin/kernel_device_modules-6.12/rt_a17_diag/rt_a17_diag/rt_a17_diag.ko" \
+    ! -path '*/sandbox/*' | sort -u)
   if [[ "${#matches[@]}" -ne 1 ]]; then
     echo "ERROR: expected one rt_a17_diag.ko in canonical Bazel output, found ${#matches[@]}" >&2
     exit 34

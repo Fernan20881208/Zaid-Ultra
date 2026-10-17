@@ -14,14 +14,17 @@
 
 static int rt_a17_open(struct inode *inode, struct file *file)
 {
-    return capable(CAP_SYS_ADMIN) ? 0 : -EPERM;
+    if (!capable(CAP_SYS_ADMIN))
+        return -EPERM;
+    /* no_llseek was removed before Linux 6.12. */
+    return nonseekable_open(inode, file);
 }
 
 static long rt_a17_ioctl(struct file *file, unsigned int cmd,
                          unsigned long arg)
 {
     const struct rt_a17_info info = {
-        .abi = 1,
+        .abi = RT_A17_ABI_VERSION,
         .capabilities = 0,
         .original_ioctls_implemented = 0,
         .reserved = 0,
@@ -51,7 +54,6 @@ static const struct file_operations rt_a17_fops = {
     .owner = THIS_MODULE,
     .open = rt_a17_open,
     .unlocked_ioctl = rt_a17_ioctl,
-    .llseek = no_llseek,
 };
 
 static struct miscdevice rt_a17_device = {
@@ -77,4 +79,4 @@ module_init(rt_a17_init);
 module_exit(rt_a17_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("A17 DWARF RT ABI diagnostics only; no memory access");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.2");

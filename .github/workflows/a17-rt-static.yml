@@ -7,6 +7,7 @@ on:
       - '.github/workflows/a17-rt-static.yml'
       - '.github/workflows/a17-samsung-6.12-build.yml'
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -49,7 +50,7 @@ jobs:
           bash RTDriver-A17/scripts/test_collect_probe_artifact.sh
           grep -Fq 'build --nobuild --config=stamp' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh' RTDriver-A17/scripts/ci_build_a17.sh
-          grep -Fq '/kernel_device_modules-6.12/mgk_64_k612_kernel_aarch64.user/Module.symvers' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'mgk_64_k612_kernel_aarch64[.]user/Module[.]symvers' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'collect_probe_artifact.sh' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'a17_compat_probe/a17_compat_probe/a17_compat_probe.ko' RTDriver-A17/scripts/collect_probe_artifact.sh
           grep -Fq 'modinfo -F vermagic' RTDriver-A17/scripts/ci_build_a17.sh
@@ -73,6 +74,10 @@ jobs:
           python3 -m py_compile RTDriver-A17/scripts/apply_samsung_czi4.py
           python3 -m py_compile RTDriver-A17/scripts/inspect_a17_source_bundle.py
           python3 -m py_compile RTDriver-A17/scripts/download_mediafire_sources.py
+          python3 -m py_compile RTDriver-A17/scripts/verify_rt_diag.py
+          bash RTDriver-A17/rt_port/tests/test_status.sh
+          bash RTDriver-A17/scripts/test_verify_module_crc.sh
+          (cd RTDriver-A17/scripts && python3 -m unittest test_verify_rt_diag -v)
           (cd RTDriver-A17/scripts && python3 -m unittest test_mediafire_sources -v)
           python3 RTDriver-A17/scripts/inspect_a17_source_bundle.py --help >/dev/null
           python3 RTDriver-A17/scripts/apply_samsung_czi4.py --help >/dev/null

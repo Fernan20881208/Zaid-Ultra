@@ -1,6 +1,10 @@
 name: Build Galaxy A17 kernel 6.12 (MediaFire sources)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'RTDriver-A17/build-requests/rt-diag-*.json'
   workflow_dispatch:
     inputs:
       mode:
@@ -14,8 +18,8 @@ on:
           - kernel
           - kernel_and_probe
           - kernel_and_rt_diag
-  # Re-enable push only after full preflight verification.
-  # Expensive Samsung kernel builds must be launched explicitly.
+  # A separate explicit request file triggers one build. Ordinary source
+  # commits never trigger a kernel compile. Static checks and --nobuild gate it.
 
 permissions:
   contents: read
@@ -25,12 +29,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    uses: ./.github/workflows/a17-rt-static.yml
   compile:
+    needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     env:
       A17_REPORT_DIR: ${{ github.workspace }}/a17-ci-results
-      BUILD_MODE: ${{ github.event_name == 'push' && 'kernel_and_probe' || inputs.mode }}
+      BUILD_MODE: ${{ github.event_name == 'push' && 'kernel_and_rt_diag' || inputs.mode }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -46,6 +53,7 @@ jobs:
             build-essential cmake ninja-build clang lld binutils file kmod
           mkdir -p "$A17_REPORT_DIR"
           df -h . | tee "$A17_REPORT_DIR/disk-at-start.txt"
+          git rev-parse HEAD > "$A17_REPORT_DIR/source-commit.txt"
 
       - name: Download from MediaFire and verify original SHA-256
         shell: bash
@@ -77,3 +85,13 @@ jobs:
           path: a17-ci-results/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Summarize actual verification result
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "$A17_REPORT_DIR/rt-diag-report.md" ]]; then
+            cat "$A17_REPORT_DIR/rt-diag-report.md" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -f "$A17_REPORT_DIR/status.txt" ]]; then
+            cat "$A17_REPORT_DIR/status.txt" >> "$GITHUB_STEP_SUMMARY"
+          fi
