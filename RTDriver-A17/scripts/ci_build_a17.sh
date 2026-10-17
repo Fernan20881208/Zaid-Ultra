@@ -110,6 +110,13 @@ if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" ]]; then
   MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
   mkdir -p "$MOD"
   cp "$SRC/a17_compat_probe.c" "$SRC/Makefile" "$SRC/BUILD.bazel" "$MOD/"
+  # Integrate the clean-room RT diagnostic into Samsung's real Kleaf graph.
+  # It cannot access process memory, hook games or control breakpoints.
+  RT_SRC="$REPO_ROOT/RTDriver-A17/rt_port"
+  RT_MOD="$KROOT/kernel_device_modules-6.12/rt_a17_diag"
+  mkdir -p "$RT_MOD"
+  cp "$RT_SRC/rt_a17_diag.c" "$RT_SRC/rt_abi.h" \
+     "$RT_SRC/Makefile" "$RT_SRC/BUILD.bazel" "$RT_MOD/"
   bash "$REPO_ROOT/RTDriver-A17/scripts/probe_preflight.sh" "$KROOT" "$BUILD_CONFIG" \
     2>&1 | tee "$REPORT/probe-source-preflight.log"
   (
@@ -131,9 +138,10 @@ if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" ]]; then
       --//build/bazel_mgk_rules:kernel_version=6.12 \
       --experimental_optimize_ddk_config_actions \
       --user_ddk_unsafe_headers=//kernel_device_modules-6.12:mtk_use_gki_unsafe_headers \
-      //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe
+      //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe \
+      //kernel_device_modules-6.12/rt_a17_diag:rt_a17_diag
   ) 2>&1 | tee "$REPORT/probe-analysis.log"
-  echo "Bazel probe analysis passed without compilation." | tee -a "$REPORT/status.txt"
+  echo "Bazel probe and new RT diagnostic targets analyzed without compilation." | tee -a "$REPORT/status.txt"
   if [[ "$A17_STAGE" == "preflight" ]]; then
     echo "Preflight completed; intentionally no kernel or .ko built." | tee -a "$REPORT/status.txt"
     exit 0
