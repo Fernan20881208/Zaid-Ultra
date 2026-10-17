@@ -57,6 +57,10 @@ KROOT="$OUTPUT/Kernel/kernel"
 # Integrate into the real targets, preserving Kleaf build and vendor sources.
 bash "$REPO_ROOT/RTDriver-A17/scripts/integrate_aosp_deps.sh" "$AOSP" "$KROOT" \
   2>&1 | tee "$REPORT/aosp-integration.log"
+# Samsung ships build/bazel_common_rules as a symlink to an external checkout.
+# The upstream Android 16 manifest no longer declares this legacy repository.
+bash "$REPO_ROOT/RTDriver-A17/scripts/fetch_bazel_common_rules.sh" "$KROOT" \
+  2>&1 | tee "$REPORT/bazel-common-rules.log"
 CLANG_BIN="$KROOT/prebuilts/clang/host/linux-x86/clang-r536225/bin/clang"
 if [[ ! -x "$CLANG_BIN" ]]; then
   echo "ERROR: AOSP manifest no entrego clang-r536225. No compilar con otra version." | tee -a "$REPORT/status.txt" >&2
