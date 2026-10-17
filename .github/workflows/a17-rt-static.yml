@@ -24,6 +24,12 @@ jobs:
           bash -n RTDriver-A17/scripts/probe_preflight.sh
           bash -n RTDriver-A17/scripts/test_probe_makefile.sh
           bash RTDriver-A17/scripts/test_probe_makefile.sh
+          bash -n RTDriver-A17/scripts/configure_stock_release.sh
+          bash -n RTDriver-A17/scripts/test_stock_release.sh
+          bash RTDriver-A17/scripts/test_stock_release.sh
+          bash -n RTDriver-A17/scripts/verify_module_crc.sh
+          grep -Fq 'configure_stock_release.sh' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'verify_module_crc.sh' RTDriver-A17/scripts/ci_build_a17.sh
           bash -n RTDriver-A17/scripts/collect_probe_artifact.sh
           bash -n RTDriver-A17/scripts/test_collect_probe_artifact.sh
           bash RTDriver-A17/scripts/test_collect_probe_artifact.sh
