@@ -174,6 +174,55 @@ sha256sum "$REPORT/Module.symvers" > "$REPORT/module-symvers-sha256.txt"
 wc -l "$REPORT/Module.symvers" > "$REPORT/module-symvers-lines.txt"
 echo 'Samsung kernel build generated canonical kernel_build Module.symvers (device ABI still unverified).' | tee -a "$REPORT/status.txt"
 
+if [[ "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
+  # The diagnostic source is new code with no process memory hooks, not RT.
+  export KERNEL_VERSION="kernel-6.12"
+  export KERNEL_BUILD_VARIANT="$MODE"
+  (
+    cd "$KROOT"
+    set +u
+    source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh \
+      > "$REPORT/rt-diag-env.log" 2>&1
+    set -u
+    [[ "$KERNEL_VERSION" == "kernel-6.12" ]]
+    [[ "$KERNEL_BUILD_VARIANT" == "user" ]]
+    [[ "$SOURCE_DATE_EPOCH" == "0" ]]
+    tools/bazel \
+      --output_root="$OUT_DIR" \
+      --output_base="$OUT_DIR/bazel/output_user_root/output_base" \
+      build --config=stamp \
+      --repo_manifest="$KROOT:$KROOT/kernel_device_modules-6.12/fake_manifest.xml" \
+      --experimental_writable_outputs \
+      --allow_ddk_unsafe_headers=1 \
+      --workaround_btrfs_b292212788 \
+      --//build/bazel_mgk_rules:kernel_version=6.12 \
+      --experimental_optimize_ddk_config_actions \
+      --user_ddk_unsafe_headers=//kernel_device_modules-6.12:mtk_use_gki_unsafe_headers \
+      //kernel_device_modules-6.12/rt_a17_diag:rt_a17_diag
+  ) 2>&1 | tee "$REPORT/rt-diag-build.log"
+  bash "$REPO_ROOT/RTDriver-A17/rt_port/collect_diag.sh" \
+    "$KROOT" "$OUTPUT/Kernel/out" "$REPORT" \
+    2>&1 | tee "$REPORT/rt-diag-collection.log"
+  file "$REPORT/rt_a17_diag.ko" | tee "$REPORT/rt-diag-file.txt"
+  readelf -h "$REPORT/rt_a17_diag.ko" | grep -q "AArch64" || {
+    echo "ERROR: RT diagnostic target is not AArch64" >&2
+    exit 45
+  }
+  modinfo "$REPORT/rt_a17_diag.ko" | tee "$REPORT/rt-diag-modinfo.txt"
+  MAGIC="$(modinfo -F vermagic "$REPORT/rt_a17_diag.ko")"
+  EXPECTED_RELEASE="6.12.38-android16-5-abA175FXXS7CZI4-4k"
+  printf "Module release: %s\n" "$MAGIC" > "$REPORT/rt-diag-compatibility.txt"
+  modinfo -F signer "$REPORT/rt_a17_diag.ko" >> "$REPORT/rt-diag-compatibility.txt"
+  bash "$REPO_ROOT/RTDriver-A17/scripts/verify_module_crc.sh" \
+    "$REPORT/rt_a17_diag.ko" "$REPORT/Module.symvers" \
+    2>&1 | tee "$REPORT/rt-diag-crc.txt"
+  if [[ "${MAGIC%% *}" != "$EXPECTED_RELEASE" ]]; then
+    echo "ERROR: RT diagnostic module kernel release does not match stock A17" | tee -a "$REPORT/status.txt" >&2
+    exit 46
+  fi
+  echo "RT ABI diagnostic module compiled for stock release. Signature and device compatibility are NOT established." | tee -a "$REPORT/status.txt"
+fi
+
 if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
   SRC="$REPO_ROOT/RTDriver-A17/src"
   MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
