@@ -1,9 +1,11 @@
-name: A17 probe Bazel analysis (NO compilation)
+name: A17 probe and RT diagnostics Bazel analysis (NO compilation)
 
 on:
   push:
     paths:
       - '.github/workflows/a17-probe-preflight.yml'
+      - 'RTDriver-A17/rt_port/**'
+      - 'RTDriver-A17/scripts/ci_build_a17.sh'
   workflow_dispatch:
 
 permissions:
@@ -46,7 +48,8 @@ jobs:
             preflight
           grep -q "Preflight completed; intentionally no kernel or .ko built." "$A17_REPORT_DIR/status.txt"
           test -s "$A17_REPORT_DIR/probe-analysis.log"
-          if [[ -e "$A17_REPORT_DIR/a17_compat_probe.ko" ]]; then
+          grep -Fq "rt_a17_diag:rt_a17_diag" "$A17_REPORT_DIR/probe-analysis.log"
+          if [[ -e "$A17_REPORT_DIR/a17_compat_probe.ko" || -e "$A17_REPORT_DIR/rt_a17_diag.ko" ]]; then
             echo "Unexpected .ko in no-build preflight" >&2
             exit 9
           fi
