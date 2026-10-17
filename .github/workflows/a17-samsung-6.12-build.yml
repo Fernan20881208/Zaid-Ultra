@@ -12,14 +12,8 @@ on:
           - prepare
           - kernel
           - kernel_and_probe
-  push:
-    paths:
-      - '.github/workflows/a17-samsung-6.12-build.yml'
-      - 'RTDriver-A17/scripts/download_mediafire_sources.py'
-      - 'RTDriver-A17/scripts/apply_samsung_czi4.py'
-      - 'RTDriver-A17/scripts/prepare_official_a17.sh'
-      - 'RTDriver-A17/scripts/ci_build_a17.sh'
-      - 'RTDriver-A17/scripts/integrate_aosp_deps.sh'
+  # Re-enable push only after full preflight verification.
+  # Expensive Samsung kernel builds must be launched explicitly.
 
 permissions:
   contents: read
