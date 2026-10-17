@@ -21,6 +21,12 @@ jobs:
           bash -n RTDriver-A17/scripts/build_probe.sh
           bash -n RTDriver-A17/scripts/prepare_official_a17.sh
           bash -n RTDriver-A17/scripts/ci_build_a17.sh
+          bash -n RTDriver-A17/scripts/probe_preflight.sh
+          grep -Fq 'build --nobuild --config=stamp' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq '/kernel_device_modules-6.12/mgk_64_k612_kernel_aarch64.user/Module.symvers' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'PROBE_BAZEL_BIN=' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe)' RTDriver-A17/scripts/ci_build_a17.sh
           grep -q 'A17_STAGE="\$3"' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'if [[ "$A17_STAGE" == "kernel_and_probe" ]]' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'export KERNEL_VERSION="kernel-6.12"' RTDriver-A17/scripts/ci_build_a17.sh
