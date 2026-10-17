@@ -1,0 +1,7 @@
+One-shot build requested by user: SM-A175F kernel_and_probe
+Target 6.12.38-android16-5-abA175FXXS7CZI4-4k
+Source: Samsung SM-A175F Android 16 official OSS plus CZI4 patches
+Fixed Makefile commit 07934236119ac9faa9a4a430c2a98b56ab0f291a
+Offline Makefile regression: 39040970132 SUCCESS
+Bazel analysis preflight: 39016417143 SUCCESS
+Compile only; no flash, install, insmod or root action
