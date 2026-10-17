@@ -21,6 +21,13 @@ jobs:
           bash -n RTDriver-A17/scripts/build_probe.sh
           bash -n RTDriver-A17/scripts/prepare_official_a17.sh
           bash -n RTDriver-A17/scripts/ci_build_a17.sh
+          grep -q 'A17_STAGE="\$3"' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'if [[ "$A17_STAGE" == "kernel_and_probe" ]]' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'if [[ "$A17_STAGE" == "kernel_and_probe" && ! -s "$REPORT/a17_compat_probe.ko" ]]' RTDriver-A17/scripts/ci_build_a17.sh
+          if grep -Eq 'if \[\[ "\$MODE" == "(prepare|kernel_and_probe)"' RTDriver-A17/scripts/ci_build_a17.sh; then
+            echo 'ERROR: Samsung MODE=user would disable requested CI stage' >&2
+            exit 1
+          fi
           bash -n RTDriver-A17/scripts/fetch_bazel_common_rules.sh
           bash -n RTDriver-A17/scripts/integrate_aosp_deps.sh
           bash -n RTDriver-A17/scripts/test_integrate_aosp_deps.sh
