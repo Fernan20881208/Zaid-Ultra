@@ -30,7 +30,10 @@ jobs:
           grep -Fq 'build --nobuild --config=stamp' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq '/kernel_device_modules-6.12/mgk_64_k612_kernel_aarch64.user/Module.symvers' RTDriver-A17/scripts/ci_build_a17.sh
-          grep -Fq 'PROBE_BAZEL_BIN=' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'collect_probe_artifact.sh' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'a17_compat_probe/a17_compat_probe/a17_compat_probe.ko' RTDriver-A17/scripts/collect_probe_artifact.sh
+          grep -Fq 'modinfo -F vermagic' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'modinfo -F signer' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe)' RTDriver-A17/scripts/ci_build_a17.sh
           grep -q 'A17_STAGE="\$3"' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'if [[ "$A17_STAGE" == "kernel_and_probe" ]]' RTDriver-A17/scripts/ci_build_a17.sh
