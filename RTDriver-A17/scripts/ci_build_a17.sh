@@ -23,6 +23,13 @@ if [[ "$A17_STAGE" == "prepare" ]]; then
   exit 0
 fi
 
+# Reproduce the actual firmware's kernelrelease using Linux's own
+# localversion* mechanism, not post-build ELF/modinfo string modifications.
+# The Samsung GKI defconfig already adds '-4k'; this supplies the firmware
+# build identifier immediately before that CONFIG_LOCALVERSION segment.
+bash "$REPO_ROOT/RTDriver-A17/scripts/configure_stock_release.sh" \
+  "$OUTPUT/Kernel/kernel-6.12" 2>&1 | tee "$REPORT/stock-release-preparation.log"
+
 # Fetch the matching AOSP Android 16 / Linux 6.12 manifest dependencies.
 # The Samsung source tree itself is NOT replaced by upstream Android common.
 AOSP="$OUTPUT/aosp-deps"
