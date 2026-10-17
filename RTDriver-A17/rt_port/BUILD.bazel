@@ -1,0 +1,10 @@
+load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
+
+# Safe port ABI staging target: status/permission diagnostics only.
+# Memory operations and hardware-breakpoint controls are not implemented.
+kernel_module(
+    name = "rt_a17_diag",
+    srcs = ["rt_a17_diag.c", "rt_abi.h", "Makefile"],
+    outs = ["rt_a17_diag.ko"],
+    kernel_build = "//kernel_device_modules-6.12:mgk_64_k612_kernel_aarch64.user",
+)
