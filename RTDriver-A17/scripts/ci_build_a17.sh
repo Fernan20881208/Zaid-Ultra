@@ -2,13 +2,13 @@
 # Samsung SM-A175F 6.12.38 build attempt on GitHub Actions, no flashing/loading.
 set -euo pipefail
 if [[ $# -ne 3 ]]; then
-  echo "Uso: bash ci_build_a17.sh BASE_ZIP CZI4_ZIP prepare|kernel|kernel_and_probe" >&2
+  echo "Uso: bash ci_build_a17.sh BASE_ZIP CZI4_ZIP prepare|preflight|kernel|kernel_and_probe" >&2
   exit 2
 fi
 BASE_ZIP="$(realpath "$1")"
 CZI4_ZIP="$(realpath "$2")"
 A17_STAGE="$3"
-case "$A17_STAGE" in prepare|kernel|kernel_and_probe) ;; *) echo "Modo invalido" >&2; exit 2;; esac
+case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe) ;; *) echo "Modo invalido" >&2; exit 2;; esac
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTPUT="${A17_WORKDIR:-$RUNNER_TEMP/a17-build}"
 REPORT="${A17_REPORT_DIR:-$REPO_ROOT/a17-ci-results}"
@@ -94,6 +94,45 @@ export PATH="$(dirname "$CLANG_BIN"):$PATH"
   printf 'Kernel source: %s\n' "$OUTPUT/Kernel/kernel-6.12"
   printf 'Samsung target: %s\n' "$PROJECT"
 } >> "$REPORT/status.txt"
+
+# Preflight the probe target and the ORIGINAL Samsung workspace-status command
+# before starting the expensive kernel build. --nobuild analyzes Bazel rules
+# but does not compile C/C++, build kernel images, or emit any .ko.
+if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" ]]; then
+  SRC="$REPO_ROOT/RTDriver-A17/src"
+  MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
+  mkdir -p "$MOD"
+  cp "$SRC/a17_compat_probe.c" "$SRC/Makefile" "$SRC/BUILD.bazel" "$MOD/"
+  bash "$REPO_ROOT/RTDriver-A17/scripts/probe_preflight.sh" "$KROOT" "$BUILD_CONFIG" \
+    2>&1 | tee "$REPORT/probe-source-preflight.log"
+  (
+    cd "$KROOT"
+    set +u
+    source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh > "$REPORT/probe-analysis-env.log" 2>&1
+    set -u
+    [[ "$KERNEL_VERSION" == "kernel-6.12" ]]
+    [[ "$KERNEL_BUILD_VARIANT" == "user" ]]
+    [[ "$SOURCE_DATE_EPOCH" == "0" ]]
+    tools/bazel \
+      --output_root="$OUT_DIR" \
+      --output_base="$OUT_DIR/bazel/output_user_root/output_base" \
+      build --nobuild --config=stamp \
+      --repo_manifest="$KROOT:$KROOT/kernel_device_modules-6.12/fake_manifest.xml" \
+      --experimental_writable_outputs \
+      --allow_ddk_unsafe_headers=1 \
+      --workaround_btrfs_b292212788 \
+      --//build/bazel_mgk_rules:kernel_version=6.12 \
+      --experimental_optimize_ddk_config_actions \
+      --user_ddk_unsafe_headers=//kernel_device_modules-6.12:mtk_use_gki_unsafe_headers \
+      //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe
+  ) 2>&1 | tee "$REPORT/probe-analysis.log"
+  echo "Bazel probe analysis passed without compilation." | tee -a "$REPORT/status.txt"
+  if [[ "$A17_STAGE" == "preflight" ]]; then
+    echo "Preflight completed; intentionally no kernel or .ko built." | tee -a "$REPORT/status.txt"
+    exit 0
+  fi
+fi
+
 (
   cd "$KROOT"
   bash ./kernel_device_modules-6.12/build.sh
