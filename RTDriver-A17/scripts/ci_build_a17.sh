@@ -2,13 +2,13 @@
 # Samsung SM-A175F 6.12.38 build attempt on GitHub Actions, no flashing/loading.
 set -euo pipefail
 if [[ $# -ne 3 ]]; then
-  echo "Uso: bash ci_build_a17.sh BASE_ZIP CZI4_ZIP prepare|preflight|kernel|kernel_and_probe" >&2
+  echo "Uso: bash ci_build_a17.sh BASE_ZIP CZI4_ZIP prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag" >&2
   exit 2
 fi
 BASE_ZIP="$(realpath "$1")"
 CZI4_ZIP="$(realpath "$2")"
 A17_STAGE="$3"
-case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe) ;; *) echo "Modo invalido" >&2; exit 2;; esac
+case "$A17_STAGE" in prepare|preflight|kernel|kernel_and_probe|kernel_and_rt_diag) ;; *) echo "Modo invalido" >&2; exit 2;; esac
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUTPUT="${A17_WORKDIR:-$RUNNER_TEMP/a17-build}"
 REPORT="${A17_REPORT_DIR:-$REPO_ROOT/a17-ci-results}"
@@ -105,7 +105,7 @@ export PATH="$(dirname "$CLANG_BIN"):$PATH"
 # Preflight the probe target and the ORIGINAL Samsung workspace-status command
 # before starting the expensive kernel build. --nobuild analyzes Bazel rules
 # but does not compile C/C++, build kernel images, or emit any .ko.
-if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" ]]; then
+if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" || "$A17_STAGE" == "kernel_and_rt_diag" ]]; then
   SRC="$REPO_ROOT/RTDriver-A17/src"
   MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
   mkdir -p "$MOD"
