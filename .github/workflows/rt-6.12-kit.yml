@@ -1,0 +1,62 @@
+name: RT ARM64 6.12 - package per-kernel build kit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'RTDriver-A17/multikernel/**'
+      - '.github/workflows/rt-6.12-kit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/a17-rt-static.yml
+  package:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the pinned original successful A17 Actions artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/Fernan20881208/Zaid-Ultra/actions/artifacts/12117721001/zip > "$RUNNER_TEMP/a17-original.zip"
+          echo 'bc52f668ec3fbd46e90b84cb38f142ce562dabb90ce580e233cfd437d430caea' " $RUNNER_TEMP/a17-original.zip" | sha256sum -c -
+      - name: Independently verify ELF, modinfo, imports and both CRC table formats
+        shell: bash
+        run: |
+          set -euo pipefail
+          RT612_REAL_ARTIFACT="$RUNNER_TEMP/a17-original.zip" \
+            python3 -m unittest discover -s RTDriver-A17/multikernel -p test_rt612.py -v
+          python3 RTDriver-A17/multikernel/rt612.py bundle \
+            --artifact-zip "$RUNNER_TEMP/a17-original.zip" \
+            --output "$RUNNER_TEMP/RT-6.12-kit" | tee "$RUNNER_TEMP/bundle-verification.json"
+          python3 - "$RUNNER_TEMP" <<'PY'
+          from pathlib import Path
+          import shutil, sys
+          root = Path(sys.argv[1])
+          shutil.make_archive(str(root / 'RT-6.12-kit'), 'zip', root / 'RT-6.12-kit')
+          PY
+          sha256sum "$RUNNER_TEMP/RT-6.12-kit.zip" > "$RUNNER_TEMP/RT-6.12-kit.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RT-6.12-per-kernel-kit
+          path: |
+            ${{ runner.temp }}/RT-6.12-kit.zip
+            ${{ runner.temp }}/RT-6.12-kit.sha256
+            ${{ runner.temp }}/bundle-verification.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Report actual scope
+        shell: bash
+        run: |
+          echo 'ARM64 6.12 source/build kit; one compiled profile: Samsung A17 CZI4.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'This packages and rechecks a previously compiled module. No kernel was rebuilt or module loaded.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Other 6.12 kernels require their own source/config/Module.symvers/toolchain and a new build.' >> "$GITHUB_STEP_SUMMARY"

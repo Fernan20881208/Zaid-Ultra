@@ -92,6 +92,8 @@ jobs:
           (cd RTDriver-A17/scripts && python3 -m unittest test_verify_rt_diag -v)
           (cd RTDriver-A17/scripts && python3 -m unittest test_resolve_rt_build_request -v)
           (cd RTDriver-A17/scripts && python3 -m unittest test_mediafire_sources -v)
+          (cd RTDriver-A17/multikernel && python3 -m unittest test_rt612 -v)
+          bash -n RTDriver-A17/multikernel/check_kernel.sh
           python3 RTDriver-A17/scripts/inspect_a17_source_bundle.py --help >/dev/null
           python3 RTDriver-A17/scripts/apply_samsung_czi4.py --help >/dev/null
           grep -q "6.12.38-android16-5-abA175FXXS7CZI4-4k" RTDriver-A17/scripts/build_probe.sh

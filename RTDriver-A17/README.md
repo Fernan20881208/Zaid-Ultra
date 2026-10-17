@@ -10,6 +10,14 @@ teléfono y la integración APK siguen sin validar.
 [Informe corregido y descarga](reports/rt-port-build-39075095531.md) ·
 [Alcance del port](rt_port/runtime/README.md).
 
+**Kit ARM64 6.12 por perfiles:** [multikernel/](multikernel/README.md) conserva
+un único código fuente y genera un módulo por kernel/configuración. Incluye el
+binario verificado como build del A17 CZI4 y un comprobador de release exacto,
+arquitectura y hashes. No existe un `.ko` ni un boot/kernel universal para todos
+los 6.12; otros dispositivos necesitan sus fuentes, configuración, toolchain y
+`Module.symvers` propios. El workflow del kit empaqueta y reverifica el build
+existente sin repetir la compilación del kernel ni cargar módulos.
+
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
 como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,
 8 CRC coincidentes con el Module.symvers generado, sin firma. Es solo diagnóstico;

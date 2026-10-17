@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "kernel_family": "6.12",
+  "architecture": "aarch64",
+  "single_universal_binary": false,
+  "profiles": [
+    {
+      "id": "samsung-a17-czi4",
+      "model": "SM-A175F",
+      "kernel_release": "6.12.38-android16-5-abA175FXXS7CZI4-4k",
+      "vermagic": "6.12.38-android16-5-abA175FXXS7CZI4-4k SMP preempt mod_unload modversions aarch64",
+      "architecture": "aarch64",
+      "build_checks_passed": true,
+      "device_tested": false,
+      "signature_acceptance_tested": false,
+      "original_rt_fully_verified": false,
+      "signature": "unsigned",
+      "build": {
+        "run_id": 39075095531,
+        "artifact_id": 12117721001,
+        "artifact_name": "a17-mediafire-build-report-20",
+        "archive_sha256": "bc52f668ec3fbd46e90b84cb38f142ce562dabb90ce580e233cfd437d430caea",
+        "source_commit": "f67b17db03320bf73c811733e542d860c3beb2c6"
+      },
+      "sha256": {
+        "rt_a17.ko": "b386c4f8755662224e41217389c318949206629c91f7a95e91aaf2b1d778706d",
+        "rt_a17_diag.ko": "8538d26a9bf05a2a9d8d717601ccb72e3774eeec14a946035cbf4a2ed36059a2",
+        "Module.symvers": "354fcb23446d4663df76ac16f7114f39a5d0ee5b1f37e385aed9e07383fd9e66",
+        "kernel.config": "986c0c1ac48dfe649b05525314ffca733959701dc24d80d4c56caa8736a8a2c5"
+      },
+      "source_sha256": {
+        "rt_port/rt_abi.h": "a19a988f556cb5031d330bfb3b8db7bc12b7b7c677e77abcee5e94f4018b3eb2",
+        "rt_port/rt_a17_diag.c": "c757919f2650ad7689cace43f71cfa2ed4104eab9737436456bb39e50a6a0f34",
+        "rt_port/Makefile": "b2c90c5b28f92e8edf7fab267de6352274d7468c7a40e488d11828fc1d85ac13",
+        "rt_port/BUILD.bazel": "266714648e4c4a77cacfb01accc83b76c676fd2fa3a28d827a70918c048b7391",
+        "rt_port/runtime/Makefile": "f0002d970aa3c7d14a96961a2d73ac9b8d05ae320f6ef60e3d8a6affed2bbe30",
+        "rt_port/runtime/BUILD.bazel": "e6666d3dc8a9718849df0729e5b3c8963c0fadd429f57d0e1f3778035d8a1d49",
+        "rt_port/runtime/rt_main.c": "7e8a57a99077b80f486a43ec17a981ea1c8ff011938cbcb1ca444a9a7e8b0eee",
+        "rt_port/runtime/rt_breakpoints.c": "18e2bdb5db0f715de6e55311b57041dd6cb960d0ad8feaa0116b267a9a940b99",
+        "rt_port/runtime/rt_breakpoints.h": "1c2d6d5c69d8fb0614d72a725e623a5d77d6a0d39049491101fa4d91567eb663",
+        "rt_port/runtime/rt_port_abi.h": "5d7e6c93f1858fe99058bb1d3dc99f72f4df823960aa0f0ef8f6eb00d27d626c",
+        "rt_port/tools/rt_a17_client.c": "97099333471d638d7cbfa799003986ade5260432c39e13b4df2e95679202efa5",
+        "rt_port/tools/rt_a17_client.h": "550607ecc373fdde400563347201345b733e83fda98c43cf0844acb831c8f48c",
+        "rt_port/tools/rt_a17_port_status.c": "f75d3479aee998dd005bbe4ba8eec315d49cb3e8a343e76d8ba19fede44557ed",
+        "rt_port/tools/rt_a17_selftest.c": "13ebdb72a16b1e6241f9beb35e9e906d36946170cbbaed57548f6f7f75069e54",
+        "rt_port/tools/rt_a17_bp_selftest.c": "c1f36f5f6de06d345ea3ce1d4cde194503c67871e7e270265fa63c0cb3273d12"
+      }
+    }
+  ]
+}
