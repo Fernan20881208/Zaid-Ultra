@@ -21,6 +21,7 @@ jobs:
           bash -n RTDriver-A17/scripts/build_probe.sh
           bash -n RTDriver-A17/scripts/prepare_official_a17.sh
           bash -n RTDriver-A17/scripts/ci_build_a17.sh
+          bash -n RTDriver-A17/scripts/fetch_bazel_common_rules.sh
           bash -n RTDriver-A17/scripts/integrate_aosp_deps.sh
           bash -n RTDriver-A17/scripts/test_integrate_aosp_deps.sh
           bash RTDriver-A17/scripts/test_integrate_aosp_deps.sh
@@ -35,3 +36,15 @@ jobs:
           grep -q "6.12.38-android16-5-abA175FXXS7CZI4-4k" RTDriver-A17/scripts/build_probe.sh
           grep -q 'obj-m' RTDriver-A17/src/Makefile
           echo 'Static checks passed; THIS IS NOT a compiled RT Driver.'
+      - name: Check actual upstream Bazel common rules source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --single-branch --branch main \
+            https://android.googlesource.com/platform/build/bazel_common_rules \
+            "$RUNNER_TEMP/bazel-common"
+          test "$(git -C "$RUNNER_TEMP/bazel-common" rev-parse HEAD)" = "b1a2840cb13746f94e4c88e7e28d308f51f87804"
+          test -f "$RUNNER_TEMP/bazel-common/dist/dist.bzl"
+          test -f "$RUNNER_TEMP/bazel-common/dist/BUILD" || \
+            test -f "$RUNNER_TEMP/bazel-common/dist/BUILD.bazel"
+          echo "Authentic pinned AOSP Bazel dist package verified."
