@@ -2,7 +2,15 @@
 
 **Objetivo:** Android 16, KernelSU, kernel `6.12.38-android16-5-abA175FXXS7CZI4-4k`.
 
-**Estado (2026-10-16):** árbol Linux Samsung 6.12.38 completo **recibido, extraído y combinado** con los 21 cambios de CZI4, y `build.config` generado mediante la herramienta oficial. **No se ha compilado ningún .ko para el teléfono.** El `a17_compat_probe.c` de este repo es únicamente una prueba de compilación/carga básica, **no el RT Driver completo**.
+**Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
+como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,
+8 CRC coincidentes con el Module.symvers generado, sin firma. Es solo diagnóstico;
+ABI/KMI del teléfono, aceptación de firma y carga siguen sin probarse.
+[Informe, hashes y artefacto real](reports/rt-diag-build-39058053061.md).
+
+Los apartados siguientes conservan el historial de preparación y pruebas.
+
+**Estado de preparación (2026-10-16):** árbol Linux Samsung 6.12.38 completo **recibido, extraído y combinado** con los 21 cambios de CZI4, y `build.config` generado mediante la herramienta oficial. **No se ha compilado ningún .ko para el teléfono.** El `a17_compat_probe.c` de este repo es únicamente una prueba de compilación/carga básica, **no el RT Driver completo**.
 
 ## Fuentes oficiales verificadas
 

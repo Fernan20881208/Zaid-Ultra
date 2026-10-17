@@ -21,8 +21,10 @@ Este módulo de diagnóstico solo permite leer una estructura de capacidades
 a través del comando 0x900. Las operaciones originales 0x800 a 0x806
 devuelven explícitamente -EOPNOTSUPP.
 
-ESTADO: auditoría de integración actualizada; consultar el informe de la
-ejecución de Actions para el resultado de compilación. No probado sobre el A17.
+ESTADO: v0.2 compilado realmente en Actions #39058053061. ELF ET_REL AArch64,
+vermagic completo exacto y 8 CRC coincidentes con el kernel del build; sin firma.
+[Informe y descarga del artefacto](../reports/rt-diag-build-39058053061.md).
+No probado sobre el teléfono; ABI/KMI del dispositivo sin verificar.
 No es el RT Driver original ni un reemplazo funcional para Zaid Hack.
 El cliente y su protocolo de inicialización siguen sin verificar.
 
