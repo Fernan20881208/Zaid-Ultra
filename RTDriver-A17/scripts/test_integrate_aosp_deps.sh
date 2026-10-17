@@ -17,6 +17,9 @@ for d in toybox bazel-skylib lz4 zlib; do
 done
 mkdir -p "$AOSP/prebuilts/build-tools/linux_musl-x86/bin"
 touch "$AOSP/prebuilts/build-tools/linux_musl-x86/bin/py3-cmd"
+mkdir -p "$AOSP/prebuilts/clang-tools/linux-x86/bin"
+touch "$AOSP/prebuilts/clang-tools/BUILD.bazel"
+printf '#!/bin/sh\n' > "$AOSP/prebuilts/clang-tools/linux-x86/bin/bindgen"
 printf '#!/bin/sh\n' > "$KROOT/build/kernel/bazel.sh"
 chmod +x "$KROOT/build/kernel/bazel.sh"
 ln -s '../build/kernel/bazel.sh' "$KROOT/tools/bazel"
@@ -28,5 +31,7 @@ for d in toybox bazel-skylib lz4 zlib; do
 done
 [[ -f "$PARENT/system/tools/mkbootimg/smoke.txt" ]]
 [[ -f "$KROOT/tools/mkbootimg/smoke.txt" ]]
+[[ -f "$KROOT/prebuilts/clang-tools/BUILD.bazel" ]]
+[[ -f "$KROOT/prebuilts/clang-tools/linux-x86/bin/bindgen" ]]
 [[ ! -d "$KROOT/external/toybox/.repo" ]]
 echo 'Offline Samsung symlink and AOSP layout tests passed.'
