@@ -188,9 +188,15 @@ if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
       //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe
   ) 2>&1 | tee "$REPORT/probe-build.log"
 
-  find "$OUTPUT/Kernel/out" -name 'a17_compat_probe.ko' -type f -print > "$REPORT/probe-paths.txt"
-  if [[ ! -s "$REPORT/probe-paths.txt" ]]; then
-    echo 'ERROR: Probe Bazel target did not produce a .ko' | tee -a "$REPORT/status.txt" >&2
+  # Bazel-bin is the canonical output symlink; do not pick an arbitrary .ko.
+  PROBE_BAZEL_BIN="$KROOT/bazel-bin/kernel_device_modules-6.12/a17_compat_probe/a17_compat_probe.ko"
+  if [[ -s "$PROBE_BAZEL_BIN" ]]; then
+    realpath "$PROBE_BAZEL_BIN" > "$REPORT/probe-paths.txt"
+  else
+    find "$OUTPUT/Kernel/out" -name 'a17_compat_probe.ko' -type f -size +0c -print | sort -u > "$REPORT/probe-paths.txt"
+  fi
+  if [[ "$(wc -l < "$REPORT/probe-paths.txt")" -ne 1 ]]; then
+    echo 'ERROR: Expected exactly one real, nonempty a17_compat_probe.ko' | tee -a "$REPORT/status.txt" >&2
     exit 34
   fi
   cp "$(head -n 1 "$REPORT/probe-paths.txt")" "$REPORT/a17_compat_probe.ko"
