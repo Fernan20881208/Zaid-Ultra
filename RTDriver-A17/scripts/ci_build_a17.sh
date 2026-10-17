@@ -114,6 +114,13 @@ if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
   MOD="$KROOT/kernel_device_modules-6.12/a17_compat_probe"
   mkdir -p "$MOD"
   cp "$SRC/a17_compat_probe.c" "$SRC/Makefile" "$SRC/BUILD.bazel" "$MOD/"
+  # MediaTek's kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh sets
+  # KERNEL_VERSION=kernel-6.12 and KERNEL_BUILD_VARIANT=user. Its build.sh
+  # runs in a subshell above, so that environment was not inherited here.
+  # The mgk_info repository rule requires KERNEL_VERSION and splits at '-'.
+  export KERNEL_VERSION="kernel-6.12"
+  export KERNEL_BUILD_VARIANT="$MODE"
+  echo "Probe Bazel environment: KERNEL_VERSION=$KERNEL_VERSION, KERNEL_BUILD_VARIANT=$KERNEL_BUILD_VARIANT" | tee -a "$REPORT/status.txt"
   (
     cd "$KROOT"
     BAZEL_OUT="$(realpath -m "$KROOT/$OUT_DIR")"
