@@ -17,6 +17,7 @@ arquitectura y hashes. No existe un `.ko` ni un boot/kernel universal para todos
 los 6.12; otros dispositivos necesitan sus fuentes, configuración, toolchain y
 `Module.symvers` propios. El workflow del kit empaqueta y reverifica el build
 existente sin repetir la compilación del kernel ni cargar módulos.
+[Paquete verificado en Actions #39080963343](reports/rt-612-kit-39080963343.md).
 
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
 como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,
