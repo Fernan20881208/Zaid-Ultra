@@ -7,9 +7,10 @@ on:
         description: "Etapa de compilacion"
         type: choice
         required: true
-        default: kernel_and_probe
+        default: preflight
         options:
           - prepare
+          - preflight
           - kernel
           - kernel_and_probe
   # Re-enable push only after full preflight verification.
