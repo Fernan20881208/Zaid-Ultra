@@ -35,6 +35,7 @@ chmod 0755 "$REPO_BIN"
   "$REPO_BIN" init --depth=1 -u https://android.googlesource.com/kernel/manifest -b common-android16-6.12 --no-repo-verify
   "$REPO_BIN" sync --current-branch --no-tags --no-clone-bundle --fail-fast -j 3 \
     prebuilts/clang/host/linux-x86 \
+    prebuilts/clang-tools \
     prebuilts/build-tools \
     prebuilts/kernel-build-tools \
     prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8 \
@@ -61,6 +62,16 @@ bash "$REPO_ROOT/RTDriver-A17/scripts/integrate_aosp_deps.sh" "$AOSP" "$KROOT" \
 # The upstream Android 16 manifest no longer declares this legacy repository.
 bash "$REPO_ROOT/RTDriver-A17/scripts/fetch_bazel_common_rules.sh" "$KROOT" \
   2>&1 | tee "$REPORT/bazel-common-rules.log"
+# Bazel's kernel_toolchains rules require real bindgen prebuilts from AOSP.
+test -f "$KROOT/prebuilts/clang-tools/BUILD.bazel" || {
+  echo 'ERROR: AOSP prebuilts/clang-tools/BUILD.bazel not present' | tee -a "$REPORT/status.txt" >&2
+  exit 37
+}
+test -f "$KROOT/prebuilts/clang-tools/linux-x86/bin/bindgen" || {
+  echo 'ERROR: AOSP bindgen missing in prebuilts/clang-tools/linux-x86/bin' | tee -a "$REPORT/status.txt" >&2
+  exit 38
+}
+echo 'Validated AOSP clang-tools with Bazel BUILD.bazel and bindgen.' | tee -a "$REPORT/status.txt"
 CLANG_BIN="$KROOT/prebuilts/clang/host/linux-x86/clang-r536225/bin/clang"
 if [[ ! -x "$CLANG_BIN" ]]; then
   echo "ERROR: AOSP manifest no entrego clang-r536225. No compilar con otra version." | tee -a "$REPORT/status.txt" >&2
