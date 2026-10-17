@@ -19,6 +19,10 @@ command -v rsync >/dev/null || { echo 'rsync missing' >&2; exit 5; }
 # Prebuilts are resolved directly from KROOT by Kleaf bazel.sh.
 mkdir -p "$KROOT/prebuilts"
 rsync -a --exclude='.git' --ignore-existing "$AOSP/prebuilts/" "$KROOT/prebuilts/"
+if [[ ! -f "$KROOT/prebuilts/clang-tools/BUILD.bazel" || ! -f "$KROOT/prebuilts/clang-tools/linux-x86/bin/bindgen" ]]; then
+  echo "ERROR: Clang-tools BUILD.bazel or bindgen missing from synced prebuilts." >&2
+  exit 9
+fi
 
 # Critical: DO NOT copy to KROOT/external. That contains relative symlinks.
 # Its symlinks resolve to the *parent* of KROOT (PARENT/external).
