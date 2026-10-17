@@ -26,6 +26,9 @@ jobs:
           bash RTDriver-A17/scripts/test_probe_makefile.sh
           cc -std=c11 -Wall -Wextra -Werror RTDriver-A17/rt_port/tests/test_abi.c -o "$RUNNER_TEMP/a17-rt-abi"
           "$RUNNER_TEMP/a17-rt-abi"
+          cc -D_GNU_SOURCE -std=gnu11 -Wall -Wextra -Werror RTDriver-A17/rt_port/tools/rt_a17_status.c -o "$RUNNER_TEMP/a17-rt-status"
+          grep -Fq '.original_ioctls_implemented = 0' RTDriver-A17/rt_port/rt_a17_diag.c
+          grep -Fq 'return -EOPNOTSUPP;' RTDriver-A17/rt_port/rt_a17_diag.c
           bash -n RTDriver-A17/rt_port/tests/test_makefile.sh
           bash RTDriver-A17/rt_port/tests/test_makefile.sh
           bash -n RTDriver-A17/rt_port/collect_diag.sh
