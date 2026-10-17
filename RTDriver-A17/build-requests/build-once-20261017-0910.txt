@@ -1,0 +1,5 @@
+Authorized one-shot Samsung SM-A175F CZI4 build of a17_compat_probe.ko.
+Requested stage: kernel_and_probe.
+Preflight run: 39016417143 (success).
+Kernel build reference: 39000648253 (success).
+No module insertion, no flashing, no SELinux modifications.
