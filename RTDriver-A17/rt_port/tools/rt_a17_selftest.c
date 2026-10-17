@@ -39,7 +39,8 @@ int main(int argc, char **argv)
     fd = open("/dev/rt_a17", O_RDWR | O_CLOEXEC);
     CHECK(fd >= 0);
     CHECK(rt_a17_query(fd, &info) == 0);
-    CHECK(info.abi == RT_A17_PORT_ABI_VERSION);
+    CHECK(info.abi == RT_A17_PORT_MEMORY_ABI_VERSION ||
+          info.abi == RT_A17_PORT_ABI_VERSION);
     memory = mmap(NULL, 4 * page, PROT_READ | PROT_WRITE,
                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     CHECK(memory != MAP_FAILED);
@@ -98,7 +99,8 @@ int main(int argc, char **argv)
     errno = 0;
     CHECK(ioctl(fd, RT_OP_WRITE_MEM, &invalid) == -1 && errno == EINVAL);
     errno = 0;
-    CHECK(ioctl(fd, RT_OP_BP_CONTROL, NULL) == -1 && errno == EOPNOTSUPP);
+    CHECK(ioctl(fd, RT_OP_BP_CONTROL, NULL) == -1 &&
+          errno == (info.abi == RT_A17_PORT_ABI_VERSION ? EFAULT : EOPNOTSUPP));
     errno = 0;
     CHECK(ioctl(fd, RT_OP_INIT_KEY, NULL) == -1 && errno == EOPNOTSUPP);
     /* Also catches a target/current mmap-lock recursion regression. */

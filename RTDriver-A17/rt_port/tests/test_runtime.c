@@ -2,11 +2,15 @@
 /* Executes the production ioctl/backend C with controlled kernel API mocks.
  * Does not emulate an ARM64 kernel or prove runtime/device compatibility. */
 #include <stdio.h>
-#include "../runtime/rt_a17.c"
+#include "bp_kernel_shim.h"
+#include "../runtime/rt_breakpoints.c"
+#include "../runtime/rt_main.c"
+
+static struct file runtime_file = {.f_cred = &caller_cred};
 
 static void reset(void)
 {
-    assert(!alloc_refs && !mm_refs && !pid_refs && !task_refs && !pin_refs && !locks);
+    assert(alloc_refs == !!runtime_file.private_data && !mm_refs && !pid_refs && !task_refs && !pin_refs && !locks);
     admin = 1; deny_mm = no_mm = lock_error = alloc_error = dirty_pages = 0;
     forced_pin = -999; bad_user = NULL;
     nr_vmas = 1;
@@ -17,13 +21,14 @@ static void reset(void)
 
 static long call(unsigned int op, void *arg)
 {
-    long ret = rt_a17_fops.unlocked_ioctl(NULL, op, (unsigned long)arg);
-    assert(!alloc_refs && !mm_refs && !pid_refs && !task_refs && !pin_refs && !locks);
+    long ret = rt_a17_fops.unlocked_ioctl(&runtime_file, op, (unsigned long)arg);
+    assert(alloc_refs == 1 && !mm_refs && !pid_refs && !task_refs && !pin_refs && !locks);
     return ret;
 }
 
 int main(void)
 {
+    bp_test_fixture_init();
     unsigned char buffer[64];
     struct rt_a17_info info;
     struct rt_copy_memory req = {
@@ -32,12 +37,12 @@ int main(void)
     };
     assert(rt_a17_init() == 0);
     reset();
-    assert(rt_a17_fops.open(NULL, NULL) == 0);
+    assert(rt_a17_fops.open(NULL, &runtime_file) == 0);
     assert(call(RT_A17_INFO, &info) == 0);
-    assert(info.abi == 2 && info.capabilities == 7 &&
-           info.original_ioctls_implemented == 14 && info.reserved == 0);
+    assert(info.abi == 3 && info.capabilities == 63 &&
+           info.original_ioctls_implemented == 110 && info.reserved == 0);
     admin = 0;
-    assert(rt_a17_fops.open(NULL, NULL) == -EPERM);
+    assert(rt_a17_fops.open(NULL, &runtime_file) == -EPERM);
     assert(call(RT_OP_READ_MEM, &req) == -EPERM);
     assert(call(RT_A17_INFO, &info) == -EPERM);
     reset();
@@ -130,6 +135,7 @@ int main(void)
     assert(call(RT_OP_WRITE_MEM, &req) == 0 && dirty_pages == 17);
     assert(test_pages[0].bytes[0] == 0x5a && test_pages[0].bytes[1] == 0x21);
     assert(test_pages[16].bytes[0] == 0x21 && test_pages[16].bytes[1] == 0xdd);
+    assert(rt_a17_fops.release(NULL, &runtime_file) == 0 && alloc_refs == 0);
     rt_a17_exit();
     puts("Production RT ioctl/backend host fault-injection tests passed (not device tests).");
     return 0;

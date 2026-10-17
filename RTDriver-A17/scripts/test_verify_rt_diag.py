@@ -33,7 +33,7 @@ class Tests(unittest.TestCase):
 import os,sys
 name=os.path.basename(sys.argv[0])
 if name == "modinfo":
-    fields={"name":os.environ.get("FIXTURE_NAME", "rt_a17_diag"), "vermagic":os.environ["FIXTURE_MAGIC"]}
+    fields={"name":os.environ.get("FIXTURE_NAME", "rt_a17_diag"), "version":os.environ.get("FIXTURE_VERSION", ""), "vermagic":os.environ["FIXTURE_MAGIC"]}
     print(fields.get(sys.argv[2], "") if "-F" in sys.argv else "name: rt_a17_diag")
 elif name == "modprobe": print("0x12345678 module_layout")
 else: print("controlled tool fixture")
@@ -59,7 +59,8 @@ else: print("controlled tool fixture")
             self.assertIn("vermagic", " ".join(result["errors"]))
             self.assertEqual((report / "rt_a17_diag.ko").read_bytes(), elf)
             (report / "rt_a17.ko").write_bytes(elf)
-            env.update(FIXTURE_NAME="rt_a17", FIXTURE_MAGIC=verify.TARGET + " modversions aarch64")
+            env.update(FIXTURE_NAME="rt_a17", FIXTURE_VERSION="0.1",
+                       FIXTURE_MAGIC=verify.TARGET + " modversions aarch64")
             port = subprocess.run(command + ["--module-name", "rt_a17"], env=env,
                                   capture_output=True, text=True)
             self.assertEqual(port.returncode, 0, port.stdout + port.stderr)
@@ -67,6 +68,17 @@ else: print("controlled tool fixture")
             self.assertFalse(result["original_rt_fully_implemented"])
             self.assertFalse(result["device_operations_tested"])
             self.assertEqual(result["implemented_original_opcodes"], ["0x801", "0x802", "0x803"])
+            env.update(FIXTURE_VERSION="0.2")
+            port2 = subprocess.run(command + ["--module-name", "rt_a17"], env=env,
+                                   capture_output=True, text=True)
+            self.assertEqual(port2.returncode, 0, port2.stdout + port2.stderr)
+            result = json.loads((report / "rt-port-verification.json").read_text())
+            self.assertEqual(result["port_abi"], 3)
+            self.assertEqual(result["capabilities"], 0x3f)
+            self.assertEqual(result["implemented_opcode_mask"], 0x6e)
+            self.assertEqual(result["implemented_original_opcodes"],
+                             ["0x801", "0x802", "0x803", "0x805", "0x806"])
+            self.assertFalse(result["original_rt_fully_implemented"])
 
     def test_relocatable_aarch64_required(self):
         elf = bytearray(64)

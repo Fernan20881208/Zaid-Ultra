@@ -1,6 +1,7 @@
 /* Verify recovered original DWARF data sizes and offsets. */
 #include <stddef.h>
 #include "../rt_abi.h"
+#include "../runtime/rt_port_abi.h"
 _Static_assert(sizeof(struct rt_copy_memory) == 32, "COPY_MEMORY 32");
 _Static_assert(offsetof(struct rt_copy_memory, pid) == 0, "COPY_MEMORY.pid");
 _Static_assert(offsetof(struct rt_copy_memory, addr) == 8, "COPY_MEMORY.addr");
@@ -19,4 +20,10 @@ _Static_assert(RT_OP_BP_CONTROL == 0x806, "bp opcode");
 _Static_assert(sizeof(struct rt_a17_info) == 16, "diagnostic info ABI");
 _Static_assert(RT_A17_INFO == 0x900, "diagnostic opcode");
 _Static_assert(RT_A17_ABI_VERSION == 1, "diagnostic ABI revision");
+_Static_assert(sizeof(struct rt_user_regs) == 272, "ARM64 user_pt_regs");
+_Static_assert(sizeof(struct rt_breakpoint_hit) == 296, "recovered hit ABI");
+_Static_assert(offsetof(struct rt_breakpoint_hit, regs) == 24, "hit registers");
+_Static_assert(sizeof(struct rt_a17_bp_status) == 40, "BP status ABI");
+_Static_assert(RT_A17_PORT_ABI_VERSION == 3, "port ABI revision");
+_Static_assert(RT_A17_PORT_OPS == 0x6e, "implemented opcode mask");
 int main(void) { return 0; }

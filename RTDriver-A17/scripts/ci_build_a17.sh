@@ -118,7 +118,8 @@ if [[ "$A17_STAGE" == "preflight" || "$A17_STAGE" == "kernel_and_probe" || "$A17
   cp "$RT_SRC/rt_a17_diag.c" "$RT_SRC/rt_abi.h" \
      "$RT_SRC/Makefile" "$RT_SRC/BUILD.bazel" "$RT_MOD/"
   mkdir -p "$RT_MOD/runtime"
-  cp "$RT_SRC/runtime/rt_a17.c" "$RT_SRC/runtime/rt_port_abi.h" \
+  cp "$RT_SRC/runtime/rt_main.c" "$RT_SRC/runtime/rt_breakpoints.c" \
+     "$RT_SRC/runtime/rt_breakpoints.h" "$RT_SRC/runtime/rt_port_abi.h" \
      "$RT_SRC/runtime/Makefile" "$RT_SRC/runtime/BUILD.bazel" "$RT_MOD/runtime/"
   bash "$REPO_ROOT/RTDriver-A17/scripts/probe_preflight.sh" "$KROOT" "$BUILD_CONFIG" \
     2>&1 | tee "$REPORT/probe-source-preflight.log"
@@ -235,7 +236,7 @@ if [[ "$A17_STAGE" == "kernel_and_rt_port" ]]; then
   NDK_CC="$KROOT/prebuilts/ndk-r26/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang"
   [[ -x "$NDK_CC" ]] || { echo 'Missing Android NDK r26 compiler for manual tools' >&2; exit 47; }
   "$NDK_CC" --version > "$REPORT/rt-port-userspace-compiler.txt"
-  for tool in rt_a17_port_status rt_a17_selftest; do
+  for tool in rt_a17_port_status rt_a17_selftest rt_a17_bp_selftest; do
     "$NDK_CC" -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Werror -O2 -static \
       "$RT_SRC/tools/$tool.c" "$RT_SRC/tools/rt_a17_client.c" \
       -o "$REPORT/$tool"

@@ -1,10 +1,12 @@
 load("//build/kernel/kleaf:kernel.bzl", "kernel_module")
 
-# Separate from the diagnostic-only module; no original key/gyro/BP support.
+# Separate from the diagnostic-only module; key and gyro remain unsupported.
 kernel_module(
     name = "rt_a17",
     srcs = [
-        "rt_a17.c",
+        "rt_main.c",
+        "rt_breakpoints.c",
+        "rt_breakpoints.h",
         "rt_port_abi.h",
         "Makefile",
         "//kernel_device_modules-6.12/rt_a17_diag:rt_abi.h",

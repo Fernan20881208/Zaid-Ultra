@@ -95,7 +95,7 @@ def main():
     check("file", lambda: command(f"{prefix}-file.txt", ["file", str(ko)]))
     check("readelf", lambda: command(f"{prefix}-elf-header.txt", ["readelf", "-h", str(ko)]))
     check("modinfo", lambda: command(f"{prefix}-modinfo.txt", ["modinfo", str(ko)]))
-    for field in ("name", "vermagic", "depends", "signer", "sig_key", "sig_hashalgo"):
+    for field in ("name", "version", "vermagic", "depends", "signer", "sig_key", "sig_hashalgo"):
         check(field, lambda field=field: command(f"{prefix}-{field}.txt",
                                                 ["modinfo", "-F", field, str(ko)]))
     check("symbols", lambda: command(f"{prefix}-symbols.txt", ["readelf", "-Ws", str(ko)]))
@@ -138,6 +138,24 @@ def main():
         return "No external module dependencies; imported kernel symbols checked by CRC"
 
     check("dependencies", dependencies)
+    if runtime:
+        def runtime_profile():
+            version = result["checks"].get("version")
+            profiles = {
+                "0.1": (["0x801", "0x802", "0x803"], 2, 0x7, 0xe),
+                "0.2": (["0x801", "0x802", "0x803", "0x805", "0x806"], 3, 0x3f, 0x6e),
+            }
+            if version not in profiles:
+                raise ValueError(f"Unknown rt_a17 module version {version!r}; binary retained")
+            ops, abi, caps, mask = profiles[version]
+            result["implemented_original_opcodes"] = ops
+            result["port_abi"] = abi
+            result["capabilities"] = caps
+            result["implemented_opcode_mask"] = mask
+            result["original_rt_fully_implemented"] = False
+            result["device_operations_tested"] = False
+            return f"Version {version}, ABI {abi}, code capability mask {caps:#x}; device unverified"
+        check("runtime_profile", runtime_profile)
     check("crc", lambda: command(f"{prefix}-crc.txt", ["bash", str(Path(__file__).with_name(
         "verify_module_crc.sh")), str(ko), str(report / "Module.symvers")]))
     symvers = report / "Module.symvers"

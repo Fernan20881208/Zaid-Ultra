@@ -70,6 +70,12 @@ jobs:
           bash -n RTDriver-A17/scripts/test_integrate_aosp_deps.sh
           bash RTDriver-A17/scripts/test_integrate_aosp_deps.sh
           grep -q 'mgk_64_k612_kernel_aarch64.user' RTDriver-A17/src/BUILD.bazel
+          test -f RTDriver-A17/rt_port/runtime/rt_main.c
+          test -f RTDriver-A17/rt_port/runtime/rt_breakpoints.c
+          test -f RTDriver-A17/rt_port/tools/rt_a17_bp_selftest.c
+          grep -Fq 'kernel_and_rt_port' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'rt_breakpoints.c' RTDriver-A17/scripts/ci_build_a17.sh
+          grep -Fq 'rt_a17_bp_selftest' RTDriver-A17/scripts/ci_build_a17.sh
           bash -n collect_a17_buildinfo.sh
           python3 -m py_compile RTDriver-A17/scripts/apply_samsung_czi4.py
           python3 -m py_compile RTDriver-A17/scripts/inspect_a17_source_bundle.py
@@ -78,6 +84,8 @@ jobs:
           bash RTDriver-A17/rt_port/tests/test_status.sh
           bash RTDriver-A17/rt_port/tests/test_runtime.sh
           bash RTDriver-A17/rt_port/tests/test_port_status.sh
+          bash -n RTDriver-A17/rt_port/tests/test_runtime.sh
+          bash -n RTDriver-A17/rt_port/tests/test_port_status.sh
           bash -n RTDriver-A17/rt_port/collect_runtime.sh
           bash RTDriver-A17/rt_port/tests/test_collect_runtime.sh
           bash RTDriver-A17/scripts/test_verify_module_crc.sh

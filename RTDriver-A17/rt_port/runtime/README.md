@@ -4,8 +4,9 @@
 vermagic completo exacto y 45 CRC coincidentes con su kernel, sin firma.
 [Informe, hashes, modinfo y descarga](../../reports/rt-port-build-39071647279.md).
 
-`rt_a17.c` implementa tres operaciones del ABI recuperado. Es una implementación
-nueva, separada del módulo de diagnóstico `rt_a17_diag.c`, que conserva su ABI 1.
+`rt_main.c` y `rt_breakpoints.c` implementan un port nuevo, separado del módulo
+de diagnóstico `rt_a17_diag.c`, que conserva su ABI 1. La versión 0.2 expone
+ABI 3; el cliente también reconoce el ABI 2 del artefacto 0.1.
 No se ha ejecutado en el teléfono ni se ha verificado su uso con el APK original.
 
 | Comando | Implementación en `rt_a17` |
@@ -15,9 +16,10 @@ No se ha ejecutado en el teléfono ni se ha verificado su uso con el APK origina
 | `0x803` MODULE_BASE | Primera dirección de un mapeo cuyo archivo tiene exactamente ese nombre |
 | `0x800` INIT_KEY | `-EOPNOTSUPP`; inicialización privada pendiente |
 | `0x804` GYRO_CONFIG | `-EOPNOTSUPP` |
-| `0x805` BP_GET_HITS | `-EOPNOTSUPP` |
-| `0x806` BP_CONTROL | `-EOPNOTSUPP` |
-| `0x900` INFO | ABI 2, capacidades `0x7`, máscara de operaciones originales `0xe` |
+| `0x805` BP_GET_HITS | Cola acotada por descriptor; lectura parcial no consume los registros restantes |
+| `0x806` BP_CONTROL | Hasta 4 eventos por descriptor y 32 globales; se desarman tras el primer impacto |
+| `0x900` INFO | ABI 3, capacidades `0x3f`, máscara de operaciones originales `0x6e` |
+| `0x901` BP_STATUS | Límites, eventos activos, cola, errores del callback |
 
 `MODULE_BASE` devuelve el comienzo del primer mapeo del archivo; no calcula un
 load bias ELF general. Una búsqueda sin coincidencias devuelve éxito con
@@ -52,6 +54,15 @@ el nodo del port está ausente. Emite JSON:
 | `inaccessible` | 5 |
 | `partial_unverified` | 6 |
 
+Los breakpoints requieren además `CAP_SYS_PTRACE`, misma identidad de credenciales
+y namespace PID del descriptor. Se conserva la autorización ptrace/LSM y el
+acceso se restringe a mapeos normales del proceso. Un breakpoint es de un solo
+disparo porque el callback ARM64 personalizado debe desarmarlo para permitir que
+la instrucción avance. El registro de hits conserva el PC de la instrucción,
+como el handler original observado; no es la dirección vigilada de datos. La
+prueba de host usa APIs simuladas y no demuestra el comportamiento físico de los
+registros de hardware del SM-A175F.
+
 `functional_verified` permanece en `false`. Una máscara de capacidades indica
 código implementado, no certifica pruebas sobre un dispositivo. El cliente ABI 1
 original permanece disponible y no acepta capacidades distintas de cero.
@@ -61,8 +72,13 @@ Solo abre un nodo ya disponible y trabaja con un hijo creado por la propia
 herramienta y archivos temporales propios en `/data/local/tmp`. Comprueba
 transferencias que cruzan páginas, escritura observada por el hijo,
 permisos de mapeos, errores de punteros, búsqueda de módulos y opcodes pendientes.
-No carga ni instala el módulo. Un resultado positivo tiene ese alcance limitado;
-no verifica breakpoints ni toda la funcionalidad del RT original.
+No carga ni instala el módulo. Un resultado positivo tiene ese alcance limitado.
+`rt_a17_bp_selftest --run-owned-child` es otra prueba manual que crea un hijo,
+registra breakpoint de escritura y ejecución sobre memoria/código propios,
+verifica el hit y el comportamiento de un solo disparo y cierra el descriptor
+antes de terminar el hijo. Si un breakpoint de ejecución no permite continuar,
+el timeout aborta la prueba y limpia el hijo; no se debe ejecutar en otros
+procesos.
 
 El workflow dispone de `kernel_and_rt_port`: conserva el diagnóstico, añade
 el target `//kernel_device_modules-6.12/rt_a17_diag/runtime:rt_a17`, analiza
@@ -70,6 +86,8 @@ los tres targets con `--nobuild` y solo después compila. Los artefactos incluye
 ambos módulos, el Module.symvers del kernel, informes independientes y las
 herramientas Android estáticas. No cambia las opciones de firma o del dispositivo.
 
-Faltan pruebas sobre SM-A175F, KMI frente al kernel instalado, aceptación de
-firma, breakpoints y el código fuente del cliente original para integrar su
-selección de nodo/capacidades. No se ha modificado ni vuelto a firmar el APK.
+El ABI original declara `INIT_KEY` y `GYRO_CONFIG`, pero el dispatcher del ELF
+examinado no implementa esos comandos; este port los rechaza. Faltan pruebas
+sobre SM-A175F, KMI frente al kernel instalado, aceptación de firma y el código
+fuente del cliente original para integrar selección de nodo/capacidades. No se
+ha modificado ni vuelto a firmar el APK.

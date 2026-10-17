@@ -24,6 +24,7 @@
 #include <linux/uaccess.h>
 #include <asm/cacheflush.h>
 #include "rt_port_abi.h"
+#include "rt_breakpoints.h"
 
 /* Pin the authorized mm, rather than checking one mm then accessing a new
  * one after exec. mm_access preserves normal ptrace, credentials and LSM
@@ -237,9 +238,17 @@ free_path:
 
 static int rt_a17_open(struct inode *inode, struct file *file)
 {
+	int ret;
+
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
-	return nonseekable_open(inode, file);
+	ret = nonseekable_open(inode, file);
+	return ret ? ret : rt_bp_open(file);
+}
+
+static int rt_a17_release(struct inode *inode, struct file *file)
+{
+	return rt_bp_release(file);
 }
 
 static long rt_a17_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
@@ -263,10 +272,12 @@ static long rt_a17_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		return rt_copy_memory(ptr, true);
 	case RT_OP_MODULE_BASE:
 		return rt_module_base(ptr);
-	case RT_OP_INIT_KEY:
-	case RT_OP_GYRO_CONFIG:
 	case RT_OP_BP_GET_HITS:
 	case RT_OP_BP_CONTROL:
+	case RT_A17_BP_STATUS:
+		return rt_bp_ioctl(file, cmd, ptr);
+	case RT_OP_INIT_KEY:
+	case RT_OP_GYRO_CONFIG:
 		return -EOPNOTSUPP;
 	default:
 		return -ENOTTY;
@@ -276,6 +287,7 @@ static long rt_a17_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static const struct file_operations rt_a17_fops = {
 	.owner = THIS_MODULE,
 	.open = rt_a17_open,
+	.release = rt_a17_release,
 	.unlocked_ioctl = rt_a17_ioctl,
 };
 
@@ -299,4 +311,4 @@ module_init(rt_a17_init);
 module_exit(rt_a17_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Samsung A17 partial RT ABI port; device validation pending");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.2");

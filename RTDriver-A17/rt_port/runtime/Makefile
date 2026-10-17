@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 ifneq ($(KERNELRELEASE),)
 obj-m += rt_a17.o
+rt_a17-y := rt_main.o rt_breakpoints.o
 else
 ifeq ($(strip $(KERNEL_SRC)),)
 $(error KERNEL_SRC is required to build this Samsung kernel module)

@@ -19,6 +19,7 @@
 #define PATH_MAX 4096
 #define GFP_KERNEL 0
 #define CAP_SYS_ADMIN 21
+#define CAP_SYS_PTRACE 19
 #define PIDTYPE_PID 0
 #define PTRACE_MODE_ATTACH_REALCREDS 0x12
 #define FOLL_WRITE 1U
@@ -30,10 +31,12 @@
 #define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
 #define offset_in_page(n) ((n) & (PAGE_SIZE - 1))
 #define min(a, b) ((a) < (b) ? (a) : (b))
+#define min_t(t, a, b) ((t)(a) < (t)(b) ? (t)(a) : (t)(b))
 #define check_add_overflow(a, b, out) __builtin_add_overflow(a, b, out)
 #define ERR_PTR(n) ((void *)(intptr_t)(n))
 #define PTR_ERR(p) ((long)(intptr_t)(p))
 #define IS_ERR(p) ((uintptr_t)(p) >= (uintptr_t)-4095)
+#define IS_ERR_OR_NULL(p) (!(p) || IS_ERR(p))
 #define u64_to_user_ptr(n) ((void *)(uintptr_t)(n))
 #define THIS_MODULE NULL
 #define MISC_DYNAMIC_MINOR 255
@@ -44,10 +47,16 @@
 #define module_exit(fn)
 
 struct inode { int unused; };
-struct file { struct { const char *name; } f_path; };
+struct cred;
+struct file {
+    struct { const char *name; } f_path;
+    void *private_data;
+    const struct cred *f_cred;
+};
 struct file_operations {
     void *owner;
     int (*open)(struct inode *, struct file *);
+    int (*release)(struct inode *, struct file *);
     long (*unlocked_ioctl)(struct file *, unsigned int, unsigned long);
 };
 struct miscdevice {
@@ -58,7 +67,14 @@ struct miscdevice {
 };
 struct mm_struct { unsigned long task_size; };
 struct pid { int unused; };
-struct task_struct { int unused; };
+struct signal_struct;
+struct task_struct {
+    int unused;
+    struct mm_struct *mm;
+    struct signal_struct *signal;
+    const struct cred *cred;
+    int compat;
+};
 struct page { unsigned char bytes[PAGE_SIZE]; };
 struct vm_area_struct {
     unsigned long vm_start, vm_end, vm_flags;
@@ -71,9 +87,13 @@ static struct page test_pages[20];
 static struct vm_area_struct test_vmas[4];
 static unsigned int nr_vmas;
 static int admin = 1, deny_mm, no_mm, lock_error, alloc_error;
+static int ptrace_allowed = 1;
+static unsigned int irq_mask, raw_locks;
 static long forced_pin = -999;
 static int alloc_refs, mm_refs, pid_refs, task_refs, pin_refs, locks, dirty_pages;
 static const void *bad_user;
+static const void *bad_write_user;
+static void (*copy_hook)(void);
 
 static bool access_ok(const void *p, size_t n)
 {
@@ -82,12 +102,15 @@ static bool access_ok(const void *p, size_t n)
 }
 static size_t copy_from_user(void *dst, const void *src, size_t n)
 {
+    assert(!irq_mask && !raw_locks);
     if (src == bad_user || !access_ok(src, n)) return n;
     memcpy(dst, src, n); return 0;
 }
 static size_t copy_to_user(void *dst, const void *src, size_t n)
 {
-    if (dst == bad_user || !access_ok(dst, n)) return n;
+    assert(!irq_mask && !raw_locks);
+    if (dst == bad_user || dst == bad_write_user || !access_ok(dst, n)) return n;
+    if (copy_hook) { void (*hook)(void) = copy_hook; copy_hook = NULL; hook(); }
     memcpy(dst, src, n); return 0;
 }
 static long strncpy_from_user(char *dst, const char *src, long n)
@@ -100,12 +123,16 @@ static long strncpy_from_user(char *dst, const char *src, long n)
 }
 static void *kmalloc(size_t n, int flags)
 {
+    assert(!irq_mask && !raw_locks);
     (void)flags; if (alloc_error) return NULL;
     void *p = malloc(n); if (p) alloc_refs++; return p;
 }
 static void kfree(void *p) { if (p) alloc_refs--; free(p); }
 static void kfree_sensitive(void *p) { kfree(p); }
-static bool capable(int cap) { assert(cap == CAP_SYS_ADMIN); return admin; }
+static bool capable(int cap) {
+    assert(cap == CAP_SYS_ADMIN || cap == CAP_SYS_PTRACE);
+    return cap == CAP_SYS_ADMIN ? admin : ptrace_allowed;
+}
 static struct pid *find_get_pid(pid_t nr)
 {
     if (nr != 42) return NULL; pid_refs++; return &test_pid;
@@ -124,7 +151,7 @@ static struct mm_struct *mm_access(struct task_struct *task, unsigned int mode)
     if (no_mm) return NULL;
     mm_refs++; return &test_mm;
 }
-static void mmput(struct mm_struct *mm) { assert(mm == &test_mm); mm_refs--; }
+static void mmput(struct mm_struct *mm) { assert(mm); mm_refs--; }
 static int mmap_read_lock_killable(struct mm_struct *mm)
 {
     assert(mm == &test_mm); if (lock_error) return -EINTR; locks++; return 0;
