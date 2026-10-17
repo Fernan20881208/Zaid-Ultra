@@ -4,8 +4,6 @@ on:
   push:
     paths:
       - '.github/workflows/a17-probe-preflight.yml'
-      - 'RTDriver-A17/rt_port/**'
-      - 'RTDriver-A17/scripts/ci_build_a17.sh'
   workflow_dispatch:
 
 permissions:
