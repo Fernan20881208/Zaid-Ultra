@@ -13,9 +13,7 @@ mkdir -p "$KROOT" "$(dirname "$CANON")" "$(dirname "$STAGED")" "$(dirname "$SAND
 printf "CANONICAL-ELF-FIXTURE" > "$CANON"
 printf "STAGING-NOT-CANONICAL" > "$STAGED"
 printf "SANDBOX-NOT-CANONICAL" > "$SANDBOX"
-ln -s "$(dirname "$(dirname "$(dirname "$(dirname "$CANON")")")")" "$KROOT/bazel-bin"
 # Force the verified fallback route: Bazel symlink can be absent with --output_root.
-rm "$KROOT/bazel-bin"
 bash "$REPO/RTDriver-A17/scripts/collect_probe_artifact.sh" "$KROOT" "$TMP/report1" "$KOUT"
 cmp "$CANON" "$TMP/report1/a17_compat_probe.ko"
 grep -Fxq "$CANON" "$TMP/report1/probe-paths.txt"
@@ -33,4 +31,10 @@ if bash "$REPO/RTDriver-A17/scripts/collect_probe_artifact.sh" "$KROOT" "$TMP/re
   exit 1
 fi
 grep -Fq "expected exactly one canonical Bazel output, found 2" "$TMP/err.log"
+rm "$CANON" "$SECOND"
+if bash "$REPO/RTDriver-A17/scripts/collect_probe_artifact.sh" "$KROOT" "$TMP/report4" "$KOUT" >"$TMP/err-missing.log" 2>&1; then
+  echo "ERROR: collector selected stale staging or sandbox module" >&2
+  exit 1
+fi
+grep -Fq "expected exactly one canonical Bazel output, found 0" "$TMP/err-missing.log"
 echo "A17 probe path collection regression PASSED without kernel compilation."
