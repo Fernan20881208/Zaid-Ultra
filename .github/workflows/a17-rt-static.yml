@@ -22,6 +22,8 @@ jobs:
           bash -n RTDriver-A17/scripts/prepare_official_a17.sh
           bash -n RTDriver-A17/scripts/ci_build_a17.sh
           bash -n RTDriver-A17/scripts/probe_preflight.sh
+          bash -n RTDriver-A17/scripts/test_probe_makefile.sh
+          bash RTDriver-A17/scripts/test_probe_makefile.sh
           grep -Fq 'build --nobuild --config=stamp' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq 'source ./kernel_device_modules-6.12/kernel/kleaf/_setup_env.sh' RTDriver-A17/scripts/ci_build_a17.sh
           grep -Fq '/kernel_device_modules-6.12/mgk_64_k612_kernel_aarch64.user/Module.symvers' RTDriver-A17/scripts/ci_build_a17.sh
