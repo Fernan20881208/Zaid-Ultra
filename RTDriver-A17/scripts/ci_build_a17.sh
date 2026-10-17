@@ -199,31 +199,46 @@ if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
       //kernel_device_modules-6.12/a17_compat_probe:a17_compat_probe
   ) 2>&1 | tee "$REPORT/probe-build.log"
 
-  # Bazel-bin is the canonical output symlink; do not pick an arbitrary .ko.
-  PROBE_BAZEL_BIN="$KROOT/bazel-bin/kernel_device_modules-6.12/a17_compat_probe/a17_compat_probe.ko"
-  if [[ -s "$PROBE_BAZEL_BIN" ]]; then
-    realpath "$PROBE_BAZEL_BIN" > "$REPORT/probe-paths.txt"
-  else
-    find "$OUTPUT/Kernel/out" -name 'a17_compat_probe.ko' -type f -size +0c -print | sort -u > "$REPORT/probe-paths.txt"
-  fi
-  if [[ "$(wc -l < "$REPORT/probe-paths.txt")" -ne 1 ]]; then
-    echo 'ERROR: Expected exactly one real, nonempty a17_compat_probe.ko' | tee -a "$REPORT/status.txt" >&2
-    exit 34
-  fi
-  cp "$(head -n 1 "$REPORT/probe-paths.txt")" "$REPORT/a17_compat_probe.ko"
+  # Copy the exact nested Bazel target output. On #39041316430 the module
+  # compiled successfully; discovery failed because the target has TWO nested
+  # a17_compat_probe directories and sandbox/staging copies existed.
+  bash "$REPO_ROOT/RTDriver-A17/scripts/collect_probe_artifact.sh" \
+    "$KROOT" "$REPORT" "$OUTPUT/Kernel/out" \
+    2>&1 | tee "$REPORT/probe-collection.log"
   file "$REPORT/a17_compat_probe.ko" | tee "$REPORT/probe-file.txt"
   if ! readelf -h "$REPORT/a17_compat_probe.ko" | grep -q 'AArch64'; then
     echo 'ERROR: Probe not ELF AArch64' | tee -a "$REPORT/status.txt" >&2
     exit 35
   fi
-  if command -v modinfo >/dev/null; then
-    modinfo "$REPORT/a17_compat_probe.ko" | tee "$REPORT/probe-modinfo.txt"
-    MAGIC="$(modinfo -F vermagic "$REPORT/a17_compat_probe.ko")"
-    TARGET="6.12.38-android16-5-abA175FXXS7CZI4-4k"
-    [[ "${MAGIC%% *}" == "$TARGET" ]] || { echo "ERROR: vermagic=$MAGIC" | tee -a "$REPORT/status.txt"; exit 36; }
+  # Preserve a verifiable diagnostic .ko even when the exact release differs.
+  # Refuse to claim compatibility based on the kernel version alone.
+  if ! command -v modinfo >/dev/null; then
+    echo 'ERROR: modinfo required for ABI and signing diagnostics' | tee -a "$REPORT/status.txt" >&2
+    exit 40
   fi
-  sha256sum "$REPORT/a17_compat_probe.ko" > "$REPORT/probe-sha256.txt"
-  echo 'ARM64 probe produced, NOT loaded or proven compatible in device.' | tee -a "$REPORT/status.txt"
+  modinfo "$REPORT/a17_compat_probe.ko" | tee "$REPORT/probe-modinfo.txt"
+  MAGIC="$(modinfo -F vermagic "$REPORT/a17_compat_probe.ko")"
+  SIGNER="$(modinfo -F signer "$REPORT/a17_compat_probe.ko")"
+  SIG_KEY="$(modinfo -F sig_key "$REPORT/a17_compat_probe.ko")"
+  TARGET="6.12.38-android16-5-abA175FXXS7CZI4-4k"
+  {
+    printf 'Expected release: %s\n' "$TARGET"
+    printf 'Compiled vermagic: %s\n' "$MAGIC"
+    if [[ -n "$SIGNER" && -n "$SIG_KEY" ]]; then
+      printf 'Embedded module signature signer: %s\n' "$SIGNER"
+      printf 'Embedded module signature key ID: %s\n' "$SIG_KEY"
+      printf 'CAUTION: signature presence does not prove acceptance by the device.\n'
+    else
+      printf 'WARNING: No embedded signer/key ID detected; signing is NOT verified.\n'
+      printf 'Samsung sign-file referenced missing signing_key.pem in run #39041316430.\n'
+    fi
+  } | tee "$REPORT/probe-compatibility.txt"
+  if [[ "${MAGIC%% *}" != "$TARGET" ]]; then
+    echo "ERROR: VER-MAGIC MISMATCH; DO NOT INSTALL OR LOAD THE DIAGNOSTIC MODULE." | tee -a "$REPORT/status.txt" >&2
+    echo "Expected: $TARGET ; actual: ${MAGIC%% *}" | tee -a "$REPORT/status.txt" >&2
+    exit 36
+  fi
+  echo 'ABI probe compiled for target release, but CRC/KMI and signing are NOT validated on device.' | tee -a "$REPORT/status.txt"
 fi
 if [[ "$A17_STAGE" == "kernel_and_probe" && ! -s "$REPORT/a17_compat_probe.ko" ]]; then
   echo 'ERROR: kernel_and_probe requested but there is no compiled compatibility probe.' | tee -a "$REPORT/status.txt" >&2
