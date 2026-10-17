@@ -141,12 +141,23 @@ fi
 # Search for actual build products, not fabricated .ko or CRCs.
 find "$OUTPUT/Kernel/out" -name Module.symvers -type f -size +0c -print > "$REPORT/symvers-paths.txt"
 find "$OUTPUT/Kernel/out" -name '*.ko' -type f -print > "$REPORT/kernel-modules-paths.txt"
-if [[ ! -s "$REPORT/symvers-paths.txt" ]]; then
-  echo 'ERROR: Build finished but no nonempty Module.symvers found' | tee -a "$REPORT/status.txt" >&2
+# The 2026-10-17 build produced 11 Module.symvers, including sandbox stash
+# copies and vendor modules. Require the canonical kernel_build target only.
+grep -F '/kernel_device_modules-6.12/mgk_64_k612_kernel_aarch64.user/Module.symvers' \
+  "$REPORT/symvers-paths.txt" | sort -u > "$REPORT/kernel-symvers-candidates.txt" || true
+if [[ "$(wc -l < "$REPORT/kernel-symvers-candidates.txt")" -ne 1 ]]; then
+  echo 'ERROR: Expected exactly one canonical kernel_build Module.symvers' | tee -a "$REPORT/status.txt" >&2
   exit 33
 fi
-cp "$(head -n 1 "$REPORT/symvers-paths.txt")" "$REPORT/Module.symvers"
-echo 'Samsung kernel build generated Module.symvers' | tee -a "$REPORT/status.txt"
+CANONICAL_SYMVERS="$(head -n 1 "$REPORT/kernel-symvers-candidates.txt")"
+if [[ ! -s "$CANONICAL_SYMVERS" ]]; then
+  echo 'ERROR: Canonical Module.symvers is missing or empty' | tee -a "$REPORT/status.txt" >&2
+  exit 33
+fi
+cp "$CANONICAL_SYMVERS" "$REPORT/Module.symvers"
+sha256sum "$REPORT/Module.symvers" > "$REPORT/module-symvers-sha256.txt"
+wc -l "$REPORT/Module.symvers" > "$REPORT/module-symvers-lines.txt"
+echo 'Samsung kernel build generated canonical kernel_build Module.symvers (device ABI still unverified).' | tee -a "$REPORT/status.txt"
 
 if [[ "$A17_STAGE" == "kernel_and_probe" ]]; then
   SRC="$REPO_ROOT/RTDriver-A17/src"
