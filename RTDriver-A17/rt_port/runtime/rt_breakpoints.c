@@ -62,7 +62,7 @@ static void rt_bp_hit(struct perf_event *event, struct perf_sample_data *data,
 
 	/* ARM64 only single-steps its default perf handler automatically.
 	 * Disarm first, otherwise a custom execute callback can trap forever.
-	 * This exported API explicitly supports IRQs-off use for current's
+	 * This API explicitly supports IRQs-off use for current's
 	 * event. Keeping type/address/length unchanged avoids slot allocation.
 	 */
 	attr.disabled = 1;
@@ -197,37 +197,47 @@ static int rt_bp_add(struct rt_bp_session *session,
 		ret = -EOPNOTSUPP;
 	else if (!(vma->vm_flags & (req->type == RT_BP_EXECUTE ? VM_EXEC : VM_READ)))
 		ret = -EACCES;
-	else if (atomic_inc_return(&rt_bp_total) > (int)RT_A17_MAX_BREAKPOINTS_GLOBAL) {
+	else
+		ret = 0;
+	/* perf's documented order is exec_update_lock -> ctx->mutex ->
+	 * mmap_lock. Registration takes ctx->mutex, so do not enter it while
+	 * holding the VMA-validation lock. This validates the mapping at this
+	 * point; the target can remap it later, including after registration.
+	 * The authorized mm/cred references and exec lock remain held.
+	 */
+	mmap_read_unlock(mm);
+	if (ret)
+		goto unlock_exec;
+	if (atomic_inc_return(&rt_bp_total) > (int)RT_A17_MAX_BREAKPOINTS_GLOBAL) {
 		atomic_dec(&rt_bp_total);
 		ret = -ENOSPC;
-	} else {
-		hw_breakpoint_init(&attr);
-		attr.bp_addr = req->addr;
-		attr.bp_len = req->len;
-		attr.bp_type = type;
-		attr.exclude_kernel = 1;
-		attr.exclude_hv = 1;
-		attr.inherit = 0;
-		attr.remove_on_exec = 1;
-		entry->session = session;
-		entry->pid = req->pid;
-		entry->addr = req->addr;
-		entry->cred = cred;
-		entry->mm = mm;
-		mmgrab(mm); /* Only mm_count: do not keep exited tasks' pages alive. */
-		event = register_user_hw_breakpoint(&attr, rt_bp_hit, entry, task);
-		if (IS_ERR_OR_NULL(event)) {
-			ret = event ? PTR_ERR(event) : -EOPNOTSUPP;
-			mmdrop(mm);
-			memset(entry, 0, sizeof(*entry));
-			atomic_dec(&rt_bp_total);
-		} else {
-			entry->event = event;
-			cred = NULL; /* Entry owns the reference until unregister. */
-			ret = 0;
-		}
+		goto unlock_exec;
 	}
-	mmap_read_unlock(mm);
+	hw_breakpoint_init(&attr);
+	attr.bp_addr = req->addr;
+	attr.bp_len = req->len;
+	attr.bp_type = type;
+	attr.exclude_kernel = 1;
+	attr.exclude_hv = 1;
+	attr.inherit = 0;
+	attr.remove_on_exec = 1;
+	entry->session = session;
+	entry->pid = req->pid;
+	entry->addr = req->addr;
+	entry->cred = cred;
+	entry->mm = mm;
+	mmgrab(mm); /* Only mm_count: do not keep exited tasks' pages alive. */
+	event = register_user_hw_breakpoint(&attr, rt_bp_hit, entry, task);
+	if (IS_ERR_OR_NULL(event)) {
+		ret = event ? PTR_ERR(event) : -EOPNOTSUPP;
+		mmdrop(mm);
+		memset(entry, 0, sizeof(*entry));
+		atomic_dec(&rt_bp_total);
+	} else {
+		entry->event = event;
+		cred = NULL; /* Entry owns the reference until unregister. */
+		ret = 0;
+	}
 unlock_exec:
 	up_read(&task->signal->exec_update_lock);
 put_mm:

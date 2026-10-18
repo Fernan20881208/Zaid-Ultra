@@ -92,7 +92,11 @@ static void hw_breakpoint_init(struct perf_event_attr *attr)
 static struct perf_event *register_user_hw_breakpoint(struct perf_event_attr *attr,
     perf_overflow_handler_t handler, void *context, struct task_struct *task)
 {
-    assert(!irq_mask && !raw_locks && exec_refs==1 && locks==1 && task==&test_task);
+    /* perf_event_create_kernel_counter takes ctx->mutex before mmap_lock.
+     * The caller must release its VMA-validation mmap_lock before entering
+     * perf, while retaining the authorization/exec identity lock.
+     */
+    assert(!irq_mask && !raw_locks && exec_refs==1 && locks==0 && task==&test_task);
     assert(attr->exclude_kernel && attr->exclude_hv && !attr->inherit && attr->remove_on_exec);
     assert(attr->sample_period==1 && attr->pinned);
     if(register_error)return ERR_PTR(register_error);

@@ -8,7 +8,7 @@ permissions:
   actions: read
 jobs:
   verify:
-    if: github.event.workflow_run.head_branch == 'main'
+    if: github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion != 'cancelled'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -44,6 +44,7 @@ jobs:
             echo 'Source job produced no kernel image; its evidence remains in the source run.' >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Verify the existing binary without compiling again
+        id: check
         if: steps.source.outputs.has_image == 'true'
         shell: bash
         run: |
@@ -70,7 +71,7 @@ jobs:
         if: always() && steps.source.outputs.has_image == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: rt-taipei-kernel-verified-${{ github.event.workflow_run.id }}
+          name: rt-taipei-kernel-${{ steps.check.outcome == 'success' && 'verified' || 'diagnostic' }}-${{ github.event.workflow_run.id }}
           path: rt-kernel-results/
           if-no-files-found: error
           retention-days: 30

@@ -47,6 +47,13 @@ def symbol_versions(path):
 
 
 def verify(workspace, report):
+    evidence = json.loads((report / "kernel-input-verification.json").read_text())
+    root = Path(__file__).resolve().parents[1]
+    for name in ("rt_abi.h", "runtime/rt_main.c", "runtime/rt_breakpoints.c",
+                 "runtime/rt_port_abi.h", "runtime/rt_breakpoints.h"):
+        expected_hash = hashlib.sha256((root / "rt_port" / name).read_bytes()).hexdigest()
+        if evidence["staged_source_sha256"].get("drivers/misc/rt_a17/" + name) != expected_hash:
+            raise ValueError("Kernel contains superseded RT source: " + name)
     compare = compare_config(workspace / "reference/kernel_aarch64_dot_config", report / "kernel.config")
     expected = symbol_versions(workspace / "reference/kernel_aarch64_Module.symvers")
     actual = symbol_versions(report / "Module.symvers")
@@ -105,7 +112,6 @@ def verify(workspace, report):
             module_count += 1
     if not module_count:
         raise ValueError("No matching rebuilt GKI modules supplied")
-    evidence = json.loads((report / "kernel-input-verification.json").read_text())
     evidence.update({"kernel_rebuilt": True, "kernel_release": release,
                      "vmlinux_elf_type": "ET_DYN" if elf_type == 3 else "ET_EXEC",
                      "configuration_diff": compare, "matching_exported_crcs": len(actual),

@@ -42,6 +42,13 @@ carrera con `exec`. No fuerza accesos a páginas sin permisos, no accede a
 memoria física ni busca símbolos privados. Rechaza escrituras en mapeos
 ejecutables, mapeos IO/PFN, huecos y punteros etiquetados de transferencia.
 
+El registro de breakpoints libera mmap_lock tras validar la VMA y antes de
+entrar en perf, respetando su orden ctx->mutex antes de mmap_lock. Mantiene
+las referencias al mm/cred autorizado y exec_update_lock durante el registro.
+La VMA se valida en ese momento; el proceso puede cambiar sus mapeos después.
+Esta corrección de orden de bloqueos es posterior a los módulos A17 y DDK
+históricos enlazados arriba; esos artefactos no incluyen la corrección.
+
 Antes de escribir copia todo el buffer del usuario y fija todas las páginas
 del rango acotado. Un fallo de validación, copia de origen o fijación parcial
 no modifica las páginas de destino. No ofrece transacciones frente a otras

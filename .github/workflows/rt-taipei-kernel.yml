@@ -14,7 +14,8 @@ permissions:
   contents: read
 concurrency:
   group: rt-taipei-source-kernel-${{ github.ref }}
-  cancel-in-progress: false
+  # A newer explicit request supersedes a kernel built from older RT source.
+  cancel-in-progress: true
 jobs:
   validate:
     uses: ./.github/workflows/a17-rt-static.yml
