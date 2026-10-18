@@ -250,8 +250,19 @@
     "register_user_hw_breakpoint",
     "unregister_hw_breakpoint"
   ],
-  "inference": "With trim_nonlisted_kmi=True these breakpoint imports may be unavailable to an external module. Confirm using the exact compiled Module.symvers.",
+  "inference": "The exact official Module.symvers confirms these three APIs are not exported. The GKI memory-only profile omits this backend; compiled CRC verification remains pending.",
   "target_crc_comparison_performed": false,
   "target_module_built": false,
-  "device_abi_verified": false
+  "device_abi_verified": false,
+  "effective_exports_audit": {
+    "artifact": "kernel_aarch64_Module.symvers",
+    "build_id": 14987696,
+    "sha256": "5ec414183b3ca4261c12f1837f03bc65bc89447f584226b07b6987f2b7220834",
+    "exports": 10041,
+    "missing_imports": [
+      "modify_user_hw_breakpoint",
+      "register_user_hw_breakpoint",
+      "unregister_hw_breakpoint"
+    ]
+  }
 }

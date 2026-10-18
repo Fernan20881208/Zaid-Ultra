@@ -9,6 +9,13 @@ de diagnóstico `rt_a17_diag.c`, que conserva su ABI 1. La versión 0.2 expone
 ABI 3; el cliente también reconoce el ABI 2 del artefacto 0.1.
 No se ha ejecutado en el teléfono ni se ha verificado su uso con el APK original.
 
+El perfil DDK para el Moto g55 `taipei` usa `RT_A17_MEMORY_ONLY`: compila el
+mismo backend de memoria sin `rt_breakpoints.c`. Se identifica como v0.3-memory,
+ABI 2, capacidades `0x7` y máscara `0xe`; BP_CONTROL, BP_GET_HITS y BP_STATUS
+devuelven `-EOPNOTSUPP`. Se necesita porque el GKI 14987696 no exporta las tres
+APIs de breakpoints. La tabla siguiente describe el perfil completo ABI 3.
+La selección de build no altera la ABI recuperada ni los controles ptrace/LSM.
+
 | Comando | Implementación en `rt_a17` |
 | --- | --- |
 | `0x801` READ_MEM | Lectura de memoria de datos, máximo 65536 bytes |

@@ -9,10 +9,11 @@ mkdir -p "$TMP/include/linux/sched" "$TMP/include/asm"
 for h in atomic build_bug capability cred dcache err fs highmem hw_breakpoint irqflags ktime limits miscdevice mm module mutex overflow perf_event pid pid_namespace ptrace sched/signal slab spinlock string uaccess sched/mm sched/task; do
   printf '#include "%s"\n' "$ROOT/RTDriver-A17/rt_port/tests/kernel_shim.h" > "$TMP/include/linux/$h.h"
 done
-for h in compat ptrace cacheflush; do
+for h in compat ptrace; do
   printf '#include "%s"\n' "$ROOT/RTDriver-A17/rt_port/tests/bp_kernel_shim.h" > "$TMP/include/asm/$h.h"
 done
-for test in test_runtime test_breakpoints; do
+printf '#include "%s"\n' "$ROOT/RTDriver-A17/rt_port/tests/kernel_shim.h" > "$TMP/include/asm/cacheflush.h"
+for test in test_runtime test_breakpoints test_memory_profile; do
   cc -std=gnu11 -Wall -Wextra -Werror -Wno-unused-parameter \
     -Wno-misleading-indentation -I"$TMP/include" \
     "$ROOT/RTDriver-A17/rt_port/tests/$test.c" -o "$TMP/$test"

@@ -19,10 +19,10 @@ los 6.12; otros dispositivos necesitan sus fuentes, configuración, toolchain y
 existente sin repetir la compilación del kernel ni cargar módulos.
 [Paquete verificado en Actions #39080963343](reports/rt-612-kit-39080963343.md).
 
-**Motorola moto g55 5G (`taipei`), 6.12.58:** fuente pública coincidente
-identificada, pendiente de configuración y `Module.symvers` exactos. Tres
-imports del backend de breakpoints no aparecen en las listas KMI examinadas;
-todavía no hay un `.ko` compilado para este perfil.
+**Motorola moto g55 5G (`taipei`), 6.12.58:** configuración del teléfono idéntica
+al GKI 14987696 y `Module.symvers` oficial recuperado. Se confirma la ausencia
+de las tres APIs de breakpoints. El perfil DDK de memoria anuncia ABI 2 y
+rechaza esos comandos; su compilación y validación están pendientes.
 [Investigación y datos necesarios](reports/moto-g55-taipei-preflight.md).
 
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado

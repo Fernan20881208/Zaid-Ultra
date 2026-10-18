@@ -1,8 +1,8 @@
 # Moto g55 5G (taipei): investigación previa a la compilación
 
-**Estado: pendiente de configuración y Module.symvers exactos.** No se ha
-compilado ni validado un módulo para este Motorola. Este registro no añade un
-perfil compilado a `multikernel/profiles.json` ni solicita una compilación Samsung.
+**Estado: configuración y Module.symvers recibidos; build DDK pendiente.**
+No se ha compilado ni validado un módulo para este Motorola. Este registro no
+añade un perfil compilado a `multikernel/profiles.json` ni solicita un build Samsung.
 
 ## Datos observados en las capturas
 
@@ -15,12 +15,15 @@ perfil compilado a `multikernel/profiles.json` ni solicita una compilación Sams
 | Root | `uid=0(root)`, contexto `u:r:magisk:s0` |
 | `/sys/module/rt_a17` | No presente en esa consulta |
 | `/sys/module/rt_a17_diag` | No presente en esa consulta |
-| `/proc/version` | Intento sin root: `Permission denied` |
+| `/proc/version` | Lectura con root: Clang 19.0.1 Android 14043575, basado en r536225; LLD 19.0.1 |
+| `uname -m` | `aarch64` |
+| Timestamp del kernel | `Fri Mar 6 03:47:51 UTC 2026` |
 
 La ausencia de ambos módulos indica que no estaban cargados con esos nombres;
 no determina si existe un `.ko` descargado en el almacenamiento. El filtro de
 `dmesg` sin resultados no demuestra compatibilidad ni identifica un fallo de
-carga. La captura no aporta `uname -m` ni la configuración completa.
+carga. La segunda captura y `kernel-taipei.config` aportan ya la arquitectura,
+el compilador y la configuración completa.
 
 ## Fuente pública coincidente
 
@@ -41,7 +44,7 @@ Se descargaron y examinaron, fijados a ese commit:
   objetivo ARM64 con `gki_defconfig`, listas KMI y `trim_nonlisted_kmi=True`.
 - [`gki_defconfig`](https://android.googlesource.com/kernel/common/+/b0a9599c6c01ec540e2252ca3a0e87b5b8c47c97/arch/arm64/configs/gki_defconfig):
   `CONFIG_LOCALVERSION="-4k"`, módulos, `MODVERSIONS`, CFI y firma habilitados
-  en esa fuente. No es una extracción de la configuración del teléfono.
+  en esa fuente. El archivo completo del teléfono se contrastó por separado.
 - [`kernel/fork.c`](https://android.googlesource.com/kernel/common/+/b0a9599c6c01ec540e2252ca3a0e87b5b8c47c97/kernel/fork.c):
   contiene `EXPORT_SYMBOL_GPL(mm_access)`; no se ha clasificado este símbolo
   como ausente.
@@ -61,46 +64,51 @@ Faltan en esa unión:
 - `modify_user_hw_breakpoint`
 - `unregister_hw_breakpoint`
 
-Con el recorte KMI configurado en el build oficial, esto sugiere que el backend
-actual de breakpoints puede no enlazar como módulo externo. Es una inferencia
-de las listas fuente: hace falta el `Module.symvers` del build correspondiente
-para confirmar los exports efectivos y sus CRC. La comparación realizada es de
-**nombres**, no de CRC entre kernels; que los otros nombres aparezcan en KMI no
-prueba que el port compile, cargue o funcione.
+El `kernel_aarch64_Module.symvers` oficial se recuperó después: contiene **10041
+exports** y confirma la ausencia de exactamente esos tres imports del módulo
+A17 v0.2. No se debe enlazar el backend completo contra este GKI. La comparación
+previa es de **nombres**, no una validación CRC del nuevo módulo; se comprobarán
+sus CRC después de compilarlo.
 
 [Evidencia JSON](moto-g55-taipei-kmi-audit.json) conserva los 60 nombres, los
-archivos fuente y SHA-256 de las 38 listas. No se han eliminado las dependencias
-de breakpoints ni modificado las capacidades del módulo existente. Si ese
-backend no puede usarse, deberá implementarse una variante que anuncie con
-precisión sus capacidades y rechace las operaciones pendientes.
+archivos fuente y SHA-256 de las 38 listas. El nuevo perfil DDK compila
+`rt_main.c` con `RT_A17_MEMORY_ONLY`, sin el backend de breakpoints. Anuncia
+v0.3-memory, ABI 2, capacidades `0x7` y máscara de opcodes `0xe`. Los comandos
+de breakpoints devuelven `EOPNOTSUPP`; INIT_KEY y GYRO siguen pendientes. El
+perfil Samsung conserva el backend completo ABI 3 y sus pruebas.
 
-## Datos necesarios del teléfono
+## Correspondencia comprobada del build
 
-Estas consultas requieren ejecución manual por el propietario en Termux;
-no cargan módulos ni cambian políticas:
+La configuración recibida tiene 221042 bytes y SHA-256
+`7e7f2c244ee2dd835d3689dcaea2a64c9f9028fe018134d67eca75433c4d12da`.
+Es **idéntica byte por byte** al `kernel_aarch64_dot_config` del build 14987696.
+Confirma `CONFIG_TRIM_UNUSED_KSYMS=y`, CFI, páginas de 4 KiB, MODVERSIONS básico
+y extendido, `CONFIG_MODULE_SIG_PROTECT=y` y `CONFIG_MODULE_SIG_FORCE=n`.
+Esto no prueba todavía que un módulo externo sea aceptado o funcione.
 
-```sh
-su -c 'cat /proc/version; uname -m'
-su -c 'zcat /proc/config.gz' > "$HOME/kernel-taipei.config"
-```
+El `Module.symvers` oficial tiene SHA-256
+`5ec414183b3ca4261c12f1837f03bc65bc89447f584226b07b6987f2b7220834`.
+El manifest exacto tiene SHA-256
+`111dab4e5b663f03210a77067cb9b9caac611232dc73e9ae4fec7b4e1df59ef9`:
+fija Kleaf en `c99f48b81942c0eeac81e7fadd7a6e107b87a7f0` y los prebuilts
+Clang en `77c95e8253c2c82ffd4fee92c0ad9f5ac1e8ca04`.
 
-Enviar la salida de la primera consulta y el archivo `kernel-taipei.config`.
-Si `zcat` falla o el archivo queda vacío, conservar el error y no tratarlo como
-una configuración válida. La configuración puede contener rutas locales de
-compilación; revisar el archivo antes de compartirlo. No hacen falta IMEI,
-número telefónico, cuentas ni otros identificadores personales.
+Se localizaron los artifacts mediante el endpoint público de listado del
+frontend CI y se descargaron por `/latest/raw/<nombre-exacto>`. Las URLs
+anteriores fallaban por endpoint/nombre, no por falta de autorización.
 
-Después se necesita recuperar el `Module.symvers` y la configuración completa
-del build correspondiente, o reproducirlos mediante sus fuentes y manifest
-oficiales. Los intentos con URLs directas de artifacts no recuperaron todavía
-un `Module.symvers`: el endpoint probado respondió 501 y las rutas alternativas
-404. Esto no demuestra que el artefacto no sea público.
+[`gki/14987696.json`](../gki/14987696.json) fija SHA-256, tamaño y MD5 publicado
+de 31 archivos oficiales, incluidos el entorno de módulos preparado y los
+headers DDK. Se reutilizará el kernel compilado por Google; se compilarán
+solamente los módulos. `kernel.release` y los headers de versión proceden del
+archivo oficial generado por Kbuild/Kleaf, sin fabricar versiones ni tocar ELF.
 
 ## Condiciones para una compilación verificable
 
-1. Confirmar arquitectura, configuración, toolchain, KMI y exports efectivos.
-2. Resolver el backend de breakpoints según las APIs públicas disponibles,
-   conservando la ABI y publicando las capacidades reales.
+1. Preparar los proyectos DDK fijados al manifest oficial y comprobar el
+   compilador exacto contra `CONFIG_CC_VERSION_TEXT`.
+2. Mantener excluido el backend de breakpoints en el perfil GKI y comprobar
+   que las capacidades coincidan con las operaciones compiladas.
 3. Pasar pruebas estáticas y análisis Kleaf `--nobuild` antes del build completo.
 4. Reproducir el release mediante Kbuild/Kleaf y `localversion`; comparar el
    vermagic resultante, sin editar el ELF para aparentar compatibilidad.

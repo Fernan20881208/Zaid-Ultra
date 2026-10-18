@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "build_id": "14987696",
+  "build_target": "kernel_aarch64",
+  "source_commit": "b0a9599c6c01ec540e2252ca3a0e87b5b8c47c97",
+  "kernel_release": "6.12.58-android16-6-gb0a9599c6c01-ab14987696-4k",
+  "device_config_sha256": "7e7f2c244ee2dd835d3689dcaea2a64c9f9028fe018134d67eca75433c4d12da",
+  "files": {
+    "Image": {
+      "local_name": "Image",
+      "size": 41232896,
+      "md5": "da99734faf45cb7c0b7eefcd8fdca5d3",
+      "sha256": "33c44639ade31412c6af32df40b8cab4fe4cfd21d3f80e4ef6a06cfde9ee21b2"
+    },
+    "Image.gz": {
+      "local_name": "Image.gz",
+      "size": 16776087,
+      "md5": "f502822c845e58f5449a37c7d01976ca",
+      "sha256": "472b734bddfc88679c31916bb994a3644c04e03477c99fc733680912ccf6539a"
+    },
+    "Image.lz4": {
+      "local_name": "Image.lz4",
+      "size": 19839499,
+      "md5": "30cbd4968c88752294970b8c359f6247",
+      "sha256": "f061bde7215446a26ffdeef20840a9e33124ff297dbf126de028149f3acc0594"
+    },
+    "System.map": {
+      "local_name": "System.map",
+      "size": 5941683,
+      "md5": "e12592f56c7c643d4b6f7a2e0d366641",
+      "sha256": "3f085b7a7637fe89dc476fad299ca9475bf45f3a0dc8db1433407e4c767ec67c"
+    },
+    "abi_symbollist": {
+      "local_name": "abi_symbollist",
+      "size": 1087409,
+      "md5": "61a02090bfd7689e1ba7391ba05e7801",
+      "sha256": "8ea5d27afa9792ae54df385c9652789d7b110819ab3acb6079fb21da05fd05ae"
+    },
+    "boot-gz.img": {
+      "local_name": "boot-gz.img",
+      "size": 47185920,
+      "md5": "f09853f1bde922624b1ae8765b59e15c",
+      "sha256": "fcdf4c6c34f079f11f2c3873036bb10aba8405104d4fdbc4af48433b0850d49b"
+    },
+    "boot-img.tar.gz": {
+      "local_name": "boot-img.tar.gz",
+      "size": 50694021,
+      "md5": "6b450c0ff32579ad44a0086c6ef575b5",
+      "sha256": "03e8a72e2cd939ec77d18bb62a3258bf71233c83f9c18db32a19c900518fba9e"
+    },
+    "boot-lz4.img": {
+      "local_name": "boot-lz4.img",
+      "size": 53477376,
+      "md5": "6527a10c0c949bba3438b66bfc9dd625",
+      "sha256": "9f6990c98551f5b832dfd496364c65b23559c2ea83c44438b7dce629cfaa154e"
+    },
+    "boot.img": {
+      "local_name": "boot.img",
+      "size": 67108864,
+      "md5": "053a3a36260a0b4898a8d3a49a66b31e",
+      "sha256": "7fff0f4c7de38097cc8f5eca5bc17fd243a68ec3820468004d952d0e62f99b12"
+    },
+    "build.config.constants": {
+      "local_name": "build.config.constants",
+      "size": 205,
+      "md5": "ff96573ae3146d77b5e73ef14a63cbe8",
+      "sha256": "660e45e19b31d35967dfc6ec3e1da468d2ec9ab772b5763818399e29488f4fd7"
+    },
+    "gki-info.txt": {
+      "local_name": "gki-info.txt",
+      "size": 193,
+      "md5": "33df4369863604388b9119d97c37d699",
+      "sha256": "88b9aa0d5b76890380fa7f3b5e89bb69b648ddecfd52b45c8471cf69b5b9b844"
+    },
+    "kernel-headers.tar.gz": {
+      "local_name": "kernel-headers.tar.gz",
+      "size": 17014951,
+      "md5": "b6d48a2c635a34aafecdbc364cae810c",
+      "sha256": "81829d51957928f7bcb8d3f683c9deef4f9b27e49505d898bcb56379030c3ad2"
+    },
+    "kernel-uapi-headers.tar.gz": {
+      "local_name": "kernel-uapi-headers.tar.gz",
+      "size": 1787856,
+      "md5": "bb387f3ff62eeac02730d8869d6a352e",
+      "sha256": "81d49c66a7e5c15d7a4a7cf3abf29d0da8535c402511ac3524a8b36e8037b311"
+    },
+    "kernel_aarch64_ddk_headers_archive.tar.gz": {
+      "local_name": "kernel_aarch64_ddk_headers_archive.tar.gz",
+      "size": 10386237,
+      "md5": "3692e68756d5500d8965de663770f80a",
+      "sha256": "805d913edf5f1da32d747ca9a6670041a99133e481c65afefa43911f90114dce"
+    },
+    "kernel_aarch64_filegroup_decl.tar.gz": {
+      "local_name": "kernel_aarch64_filegroup_decl.tar.gz",
+      "size": 50020966,
+      "md5": "b48e0d457f66d1996607e56bccb501b3",
+      "sha256": "adb278fc971c2c7db027d8c9c11fbfab4b5bc36fc15c7e2c0123889fd740d4aa"
+    },
+    "manifest_14987696.xml": {
+      "local_name": "manifest.xml",
+      "size": 8185,
+      "md5": "4104458cb15b41abb46a2885f89d8990",
+      "sha256": "111dab4e5b663f03210a77067cb9b9caac611232dc73e9ae4fec7b4e1df59ef9"
+    },
+    "modules.builtin": {
+      "local_name": "modules.builtin",
+      "size": 22034,
+      "md5": "360771188824c33f4ddd5b1354de5116",
+      "sha256": "7387acbb61f4b4f3f7498b6f7b24d54d3a36474d1eb9b6c31a44828f9293100a"
+    },
+    "modules.builtin.modinfo": {
+      "local_name": "modules.builtin.modinfo",
+      "size": 159980,
+      "md5": "d007a93e61176438fd29c8fba165e913",
+      "sha256": "81c450cf68959b9935bfdff9d02bfe3adba7808db2e498860c0836c1ea5e0923"
+    },
+    "signed/certified-boot-img-14987696.tar.gz": {
+      "local_name": "signed/boot-img.tar.gz",
+      "size": 50618873,
+      "md5": "a939653093640f8f0764be898302d7a8",
+      "sha256": "4cfc4e016363e590911aea503a1f22e853079938f61a293331203e7f22a7b2f7"
+    },
+    "system_dlkm.modules.blocklist": {
+      "local_name": "system_dlkm.modules.blocklist",
+      "size": 0,
+      "md5": "d41d8cd98f00b204e9800998ecf8427e",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "system_dlkm.modules.load": {
+      "local_name": "system_dlkm.modules.load",
+      "size": 2775,
+      "md5": "c44d0b48edfdadc65ee006979a91098b",
+      "sha256": "f82ddca4b8b5d42eebf6157edbf82e153e646002e819c628a5bfabc4c7e36e42"
+    },
+    "system_dlkm_staging_archive.tar.gz": {
+      "local_name": "system_dlkm_staging_archive.tar.gz",
+      "size": 14241795,
+      "md5": "ba9f06e4ede4b0730a192da898b3b4ab",
+      "sha256": "4370b84ae763e8bb71b3c5e201312f5403c88980e430e9149d7c5dbf25917727"
+    },
+    "unstripped_modules.tar.gz": {
+      "local_name": "unstripped_modules.tar.gz",
+      "size": 39187935,
+      "md5": "cfb8d0b2a656cddf64b14cc7dd8ffc06",
+      "sha256": "a994136306ec55c1689f071d57f7fa7b4ad8039da313b9f7938068b35432f854"
+    },
+    "vmlinux": {
+      "local_name": "vmlinux",
+      "size": 210731688,
+      "md5": "9418e3ca6d07c43731d4c7ec6ac85cf4",
+      "sha256": "51cfb7f41e4923af0164d036a9bc7091563436225df0ff21bf07f4560fe1dda9"
+    },
+    "vmlinux.symvers": {
+      "local_name": "vmlinux.symvers",
+      "size": 586432,
+      "md5": "132c203171ed8dc504d444898f297bdc",
+      "sha256": "dc1cf4eb3d1dee7957ced48e9abf3f3beb95f0fd97f180cd043c7f9d2ac1ca77"
+    },
+    "ci_target_mapping.json": {
+      "local_name": "ci_target_mapping.json",
+      "size": 3868,
+      "md5": "b5963dd4c7a0d577eab6b322cd1d049d",
+      "sha256": "5de18e9ad5ec3fb9384058a1250d599943b04b35a69200ac4b51e1d7fd4a5197"
+    },
+    "init_ddk.zip": {
+      "local_name": "init_ddk.zip",
+      "size": 10691660,
+      "md5": "6462128ac285892a4c564f4a551b780a",
+      "sha256": "d5404a7e7fe5f5d677439b2154c3c71d8f5043dbf037c9baaca899ad9d4281ad"
+    },
+    "kernel_aarch64_Module.symvers": {
+      "local_name": "kernel_aarch64_Module.symvers",
+      "size": 620247,
+      "md5": "53394f6a48ed3d831e31f557f8ebe926",
+      "sha256": "5ec414183b3ca4261c12f1837f03bc65bc89447f584226b07b6987f2b7220834"
+    },
+    "kernel_aarch64_dot_config": {
+      "local_name": "kernel_aarch64_dot_config",
+      "size": 221042,
+      "md5": "b2018ae8adfb95e56ac4a3fb9ee71bd7",
+      "sha256": "7e7f2c244ee2dd835d3689dcaea2a64c9f9028fe018134d67eca75433c4d12da"
+    },
+    "BUILD_INFO": {
+      "local_name": "BUILD_INFO",
+      "size": 43136,
+      "md5": "69ff770561670b8eec9446cc18af2389",
+      "sha256": "447c68a9a9a054b81eaf15385127470783b53893e6155428e1defa320ee50226"
+    },
+    "abi_symbollist.raw": {
+      "local_name": "abi_symbollist.raw",
+      "size": 237690,
+      "md5": "7683bddbc1bb2144186a85465f307935",
+      "sha256": "487f987c44447c69b1112ae84403777ab155dd49c6137a95c2b8ced6d090bc88"
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "target_id": "moto-g55-taipei-14987696",
-  "status": "awaiting_device_config_and_exact_symvers",
+  "status": "device_inputs_verified_ddk_build_pending",
   "observation_source": "User-provided Termux and device screenshots; transcribed, not live device access",
   "device": {
     "manufacturer": "Motorola",
@@ -11,9 +11,12 @@
     "root_observed": true,
     "root_context": "u:r:magisk:s0",
     "uname_release": "6.12.58-android16-6-gb0a9599c6c01-ab14987696-4k",
-    "uname_machine": null,
+    "uname_machine": "aarch64",
     "rt_a17_loaded": false,
-    "rt_a17_diag_loaded": false
+    "rt_a17_diag_loaded": false,
+    "compiler": "Android (14043575, +pgo, +bolt, +lto, +mlgo, based on r536225) Clang 19.0.1; LLD 19.0.1",
+    "kernel_build_timestamp": "Fri Mar 6 03:47:51 UTC 2026",
+    "kernel_config_sha256": "7e7f2c244ee2dd835d3689dcaea2a64c9f9028fe018134d67eca75433c4d12da"
   },
   "matching_public_source": {
     "repository": "https://android.googlesource.com/kernel/common",
@@ -24,19 +27,14 @@
     "branch": "android16-6.12",
     "kmi_generation": 6,
     "clang_version": "r536225",
-    "stock_motorola_binary_identity_verified": false
+    "stock_motorola_binary_identity_verified": false,
+    "module_symvers_sha256": "5ec414183b3ca4261c12f1837f03bc65bc89447f584226b07b6987f2b7220834",
+    "manifest_sha256": "111dab4e5b663f03210a77067cb9b9caac611232dc73e9ae4fec7b4e1df59ef9"
   },
-  "missing_kmi_list_imports": [
-    "modify_user_hw_breakpoint",
-    "register_user_hw_breakpoint",
-    "unregister_hw_breakpoint"
-  ],
   "required_inputs": [
-    "root-readable /proc/version",
-    "uname -m",
-    "Actual device kernel .config, preferably /proc/config.gz",
-    "Module.symvers and full build configuration of the corresponding kernel",
-    "Module signing enforcement and allowed exported symbols for that build"
+    "Kleaf --nobuild and actual module build against the pinned official DDK",
+    "Resulting module CRC/vermagic/signature checks",
+    "Device load and owned-child operation validation after the build; not automated"
   ],
   "build_checks_passed": false,
   "device_abi_verified": false,
@@ -44,5 +42,11 @@
   "functional_verified": false,
   "included_in_compiled_profiles": false,
   "report": "../reports/moto-g55-taipei-preflight.md",
-  "kmi_audit": "../reports/moto-g55-taipei-kmi-audit.json"
+  "kmi_audit": "../reports/moto-g55-taipei-kmi-audit.json",
+  "device_config_matches_official_build": true,
+  "missing_exported_imports": [
+    "modify_user_hw_breakpoint",
+    "register_user_hw_breakpoint",
+    "unregister_hw_breakpoint"
+  ]
 }

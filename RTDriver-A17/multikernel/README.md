@@ -79,4 +79,11 @@ evidencia de modinfo/CRC y las herramientas manuales Android. Produce un
 `bundle-verification.json` nuevo; omite el Markdown heredado de ABI 2 del
 artefacto original y conserva los datos correctos del binario v0.2.
 
+El empaquetado recibe `bundle --source-root /ruta/al/RTDriver-A17` del commit
+que produjo el binario. Comprueba los hashes fuente de ese perfil antes de
+copiarlos; un cambio posterior en el port no se presenta como el código del
+artefacto antiguo. El workflow obtiene ese snapshot en `source-at-a17-build`.
+El perfil GKI `taipei` tiene su [flujo DDK separado](https://github.com/Fernan20881208/Zaid-Ultra/tree/main/RTDriver-A17/gki);
+no se incorpora a este índice de perfiles compilados hasta verificar su build.
+
 Documentación de Kbuild: https://docs.kernel.org/kbuild/modules.html

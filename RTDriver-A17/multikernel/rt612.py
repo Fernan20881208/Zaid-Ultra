@@ -99,7 +99,7 @@ def inspect_module(data, symvers, config, release, name):
         raise ValueError(f"Module name/vermagic mismatch: {fields.get('name')!r}, {fields.get('vermagic')!r}")
     if fields.get("depends", "") or fields.get("license") != "GPL":
         raise ValueError("Unexpected external dependencies or module license")
-    if name == "rt_a17" and fields.get("version") != "0.2":
+    if name == "rt_a17" and fields.get("version") not in ("0.2", "0.3-memory"):
         raise ValueError("Unrecognized RT port version")
     exported = {}
     for line in symvers.decode().splitlines():
@@ -150,7 +150,8 @@ def inspect_module(data, symvers, config, release, name):
         raise ValueError("Unsigned module with CONFIG_MODULE_SIG_FORCE=y; binary retained as diagnostic")
     return {"name": name, "version": fields.get("version"), "elf": "ET_REL AArch64",
             "sha256": digest(data), "size": len(data), "vermagic": expected,
-            "crc_matches": len(versions), "imports": len(imported), "external_dependencies": [],
+            "crc_matches": len(versions), "imports": len(imported), "imported_symbols": sorted(imported),
+            "external_dependencies": [],
             "signature": "trailer_present_trust_unverified" if signed else "unsigned",
             "device_tested": False, "device_compatible_verified": False, "original_rt_fully_verified": False}
 
@@ -224,8 +225,9 @@ def bundle(args):
     archive = args.artifact_zip.read_bytes()
     if digest(archive) != profile["build"]["archive_sha256"]:
         raise ValueError("Actions artifact ZIP digest differs from the pinned profile")
+    profile_source = (getattr(args, "source_root", None) or HERE.parent).resolve()
     for name, expected in profile["source_sha256"].items():
-        if digest((HERE.parent / name).read_bytes()) != expected:
+        if digest((profile_source / name).read_bytes()) != expected:
             raise ValueError(f"Packaged source differs from the compiled profile: {name}")
     with zipfile.ZipFile(args.artifact_zip) as z:
         names = z.namelist()
@@ -270,9 +272,10 @@ def bundle(args):
     checksum = "".join(f"{digest(p.read_bytes())}  {p.relative_to(target)}\n" for p in sorted(target.rglob("*")) if p.is_file())
     (target / "SHA256SUMS").write_text(checksum)
     source_root = destination / "RTDriver-A17"
-    for directory in ("rt_port", "multikernel"):
-        shutil.copytree(HERE.parent / directory, source_root / directory,
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(profile_source / "rt_port",
+                    source_root / "rt_port", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(HERE, source_root / "multikernel",
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     shutil.copyfile(HERE / "README.md", destination / "README.md")
     (destination / "profiles.json").write_text(json.dumps(index, indent=2) + "\n")
     result = {"kernel_family": "6.12", "single_universal_binary": False, "compiled_profiles": [profile["id"]],
@@ -295,6 +298,8 @@ def main():
     cmd.add_argument("--profile", default="samsung-a17-czi4")
     cmd.add_argument("--artifact-zip", type=Path, required=True)
     cmd.add_argument("--output", type=Path, required=True)
+    cmd.add_argument("--source-root", type=Path,
+                     help="RTDriver-A17 directory at the compiled profile's pinned source commit")
     args = parser.parse_args()
     try:
         if args.command == "build":

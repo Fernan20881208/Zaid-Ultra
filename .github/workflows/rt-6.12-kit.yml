@@ -21,6 +21,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: f67b17db03320bf73c811733e542d860c3beb2c6
+          path: source-at-a17-build
       - name: Fetch the pinned original successful A17 Actions artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,6 +41,7 @@ jobs:
             python3 -m unittest discover -s RTDriver-A17/multikernel -p test_rt612.py -v
           python3 RTDriver-A17/multikernel/rt612.py bundle \
             --artifact-zip "$RUNNER_TEMP/a17-original.zip" \
+            --source-root "$GITHUB_WORKSPACE/source-at-a17-build/RTDriver-A17" \
             --output "$RUNNER_TEMP/RT-6.12-kit" | tee "$RUNNER_TEMP/bundle-verification.json"
           python3 - "$RUNNER_TEMP" <<'PY'
           from pathlib import Path

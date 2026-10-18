@@ -1,0 +1,118 @@
+name: RT GKI 6.12.58 - Moto taipei
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'RTDriver-A17/build-requests/gki-*.json'
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        required: true
+        default: preflight
+        options: [preflight, modules]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rt-gki-14987696-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    uses: ./.github/workflows/a17-rt-static.yml
+  build:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    env:
+      GKI_STAGE: ${{ inputs.mode || 'preflight' }}
+      GKI_REPORT: ${{ github.workspace }}/rt-gki-results
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve exactly one explicit GKI request
+        if: github.event_name == 'push'
+        run: python3 RTDriver-A17/scripts/resolve_gki_build_request.py >> "$GITHUB_ENV"
+      - name: Prepare host tools and evidence directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GKI_REPORT"
+          echo "GKI_DDK=$RUNNER_TEMP/rt-gki-ddk" >> "$GITHUB_ENV"
+          git rev-parse HEAD > "$GKI_REPORT/source-commit.txt"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends git curl python3 file kmod \
+            rsync zip make gcc g++ libelf-dev libssl-dev bison flex
+          df -h . > "$GKI_REPORT/disk-at-start.txt"
+      - name: Verify and prepare official GKI prebuilts and pinned DDK tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -u RTDriver-A17/scripts/prepare_gki_ddk.py \
+            --workspace "$GKI_DDK" --cache "$RUNNER_TEMP/gki-downloads" \
+            2>&1 | tee "$GKI_REPORT/ddk-prepare.log"
+          cp "$GKI_DDK/gki-input-verification.json" "$GKI_REPORT/"
+      - name: Kleaf analysis with no build actions
+        working-directory: ${{ env.GKI_DDK }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/bazel build --nobuild --config=stamp //rt:rt_a17_diag //rt:rt_a17 \
+            2>&1 | tee "$GKI_REPORT/bazel-nobuild.log"
+      - name: Compile only the two external modules against the official kernel
+        if: env.GKI_STAGE == 'modules'
+        working-directory: ${{ env.GKI_DDK }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/bazel build --config=stamp //rt:rt_a17_diag //rt:rt_a17 \
+            2>&1 | tee "$GKI_REPORT/bazel-build.log"
+          tools/bazel cquery --config=stamp 'set(//rt:rt_a17_diag //rt:rt_a17)' --output=files \
+            > "$GKI_REPORT/module-output-paths.txt"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, shutil
+          root, report = Path(os.environ['GKI_DDK']), Path(os.environ['GKI_REPORT'])
+          for line in (report / 'module-output-paths.txt').read_text().splitlines():
+              if Path(line).name in ('rt_a17.ko', 'rt_a17_diag.ko'):
+                  shutil.copyfile(root / line, report / Path(line).name)
+          PY
+      - name: Build ARM64 capability-query and owned-child test tools
+        if: env.GKI_STAGE == 'modules'
+        shell: bash
+        run: |
+          set -euo pipefail
+          NDK_CC="$GKI_DDK/external/kleaf/prebuilts/ndk-r26/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android26-clang"
+          "$NDK_CC" --version > "$GKI_REPORT/userspace-compiler.txt"
+          for tool in rt_a17_port_status rt_a17_selftest; do
+            "$NDK_CC" -D_GNU_SOURCE -std=gnu11 -O2 -static -Wall -Wextra -Werror \
+              "RTDriver-A17/rt_port/tools/$tool.c" RTDriver-A17/rt_port/tools/rt_a17_client.c \
+              -o "$GKI_REPORT/$tool"
+          done
+      - name: Verify ELF, modinfo, exact vermagic, allowlist and CRCs
+        if: env.GKI_STAGE == 'modules'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 RTDriver-A17/scripts/verify_gki_rt.py --workspace "$GKI_DDK" --report "$GKI_REPORT"
+      - name: Keep diagnostic evidence and actual binaries after any failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rt-taipei-14987696-${{ github.run_number }}
+          path: rt-gki-results/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Publish actual scope
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "$GKI_REPORT/rt-gki-report.md" ]]; then
+            cat "$GKI_REPORT/rt-gki-report.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'See logs. No verified module is claimed by this job.' >> "$GITHUB_STEP_SUMMARY"
+          fi

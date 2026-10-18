@@ -26,6 +26,20 @@
 #include "rt_port_abi.h"
 #include "rt_breakpoints.h"
 
+/* Some GKI builds intentionally do not export the breakpoint APIs. Build
+ * their memory-only profile explicitly; INFO must never advertise a backend
+ * that was omitted from the module. The full A17 profile keeps ABI 3.
+ */
+#ifdef RT_A17_MEMORY_ONLY
+#define RT_BUILD_ABI RT_A17_PORT_MEMORY_ABI_VERSION
+#define RT_BUILD_CAPS RT_A17_MEMORY_CAPS
+#define RT_BUILD_OPS RT_A17_MEMORY_OPS
+#else
+#define RT_BUILD_ABI RT_A17_PORT_ABI_VERSION
+#define RT_BUILD_CAPS RT_A17_PORT_CAPS
+#define RT_BUILD_OPS RT_A17_PORT_OPS
+#endif
+
 /* Pin the authorized mm, rather than checking one mm then accessing a new
  * one after exec. mm_access preserves normal ptrace, credentials and LSM
  * policy. CAP_SYS_ADMIN is an additional restriction, not an authorization
@@ -254,9 +268,9 @@ static int rt_a17_release(struct inode *inode, struct file *file)
 static long rt_a17_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	const struct rt_a17_info info = {
-		.abi = RT_A17_PORT_ABI_VERSION,
-		.capabilities = RT_A17_PORT_CAPS,
-		.original_ioctls_implemented = RT_A17_PORT_OPS,
+		.abi = RT_BUILD_ABI,
+		.capabilities = RT_BUILD_CAPS,
+		.original_ioctls_implemented = RT_BUILD_OPS,
 		.reserved = 0,
 	};
 	void __user *ptr = (void __user *)arg;
@@ -310,5 +324,10 @@ static void __exit rt_a17_exit(void)
 module_init(rt_a17_init);
 module_exit(rt_a17_exit);
 MODULE_LICENSE("GPL");
+#ifdef RT_A17_MEMORY_ONLY
+MODULE_DESCRIPTION("RT memory ABI port for GKI; breakpoints unavailable; device unverified");
+MODULE_VERSION("0.3-memory");
+#else
 MODULE_DESCRIPTION("Samsung A17 partial RT ABI port; device validation pending");
 MODULE_VERSION("0.2");
+#endif
