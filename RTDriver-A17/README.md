@@ -20,10 +20,12 @@ existente sin repetir la compilación del kernel ni cargar módulos.
 [Paquete verificado en Actions #39080963343](reports/rt-612-kit-39080963343.md).
 
 **Motorola moto g55 5G (`taipei`), 6.12.58:** configuración del teléfono idéntica
-al GKI 14987696 y `Module.symvers` oficial recuperado. Se confirma la ausencia
-de las tres APIs de breakpoints. El perfil DDK de memoria anuncia ABI 2 y
-rechaza esos comandos; su compilación y validación están pendientes.
-[Investigación y datos necesarios](reports/moto-g55-taipei-preflight.md).
+al GKI 14987696. `rt_a17.ko` v0.3-memory y `rt_a17_diag.ko` se compilaron en
+Actions #39088889251: 45 y 9 CRC coincidentes, ELF AArch64, vermagic exacto y
+sin firma. El port de memoria anuncia ABI 2; los breakpoints no están
+disponibles. Las pruebas en el teléfono y la integración APK siguen pendientes.
+[Informe, hashes y descarga](reports/moto-g55-build-39088889251.md) ·
+[Perfil DDK](gki/taipei-14987696-profile.json).
 
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
 como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,

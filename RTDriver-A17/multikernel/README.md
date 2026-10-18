@@ -84,6 +84,7 @@ que produjo el binario. Comprueba los hashes fuente de ese perfil antes de
 copiarlos; un cambio posterior en el port no se presenta como el código del
 artefacto antiguo. El workflow obtiene ese snapshot en `source-at-a17-build`.
 El perfil GKI `taipei` tiene su [flujo DDK separado](https://github.com/Fernan20881208/Zaid-Ultra/tree/main/RTDriver-A17/gki);
-no se incorpora a este índice de perfiles compilados hasta verificar su build.
+su build verificado se entrega mediante su propio artefacto e índice DDK.
+Este ZIP y `multikernel/profiles.json` conservan el perfil binario A17.
 
 Documentación de Kbuild: https://docs.kernel.org/kbuild/modules.html

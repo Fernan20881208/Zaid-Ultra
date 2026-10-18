@@ -1,8 +1,9 @@
 # Moto g55 5G (taipei): investigación previa a la compilación
 
-**Estado: configuración y Module.symvers recibidos; build DDK pendiente.**
-No se ha compilado ni validado un módulo para este Motorola. Este registro no
-añade un perfil compilado a `multikernel/profiles.json` ni solicita un build Samsung.
+**Fase previa finalizada; build DDK verificado.** Los módulos del Motorola se
+compilaron en Actions #39088889251. [Resultado, hashes y artefacto real](moto-g55-build-39088889251.md).
+La ejecución en el teléfono sigue pendiente. El perfil usa el índice DDK
+separado y no solicita un build Samsung.
 
 ## Datos observados en las capturas
 
@@ -67,8 +68,8 @@ Faltan en esa unión:
 El `kernel_aarch64_Module.symvers` oficial se recuperó después: contiene **10041
 exports** y confirma la ausencia de exactamente esos tres imports del módulo
 A17 v0.2. No se debe enlazar el backend completo contra este GKI. La comparación
-previa es de **nombres**, no una validación CRC del nuevo módulo; se comprobarán
-sus CRC después de compilarlo.
+previa es de **nombres**; posteriormente se verificaron 45 CRC del port de
+memoria y 9 del diagnóstico contra este Module.symvers.
 
 [Evidencia JSON](moto-g55-taipei-kmi-audit.json) conserva los 60 nombres, los
 archivos fuente y SHA-256 de las 38 listas. El nuevo perfil DDK compila
@@ -115,8 +116,9 @@ archivo oficial generado por Kbuild/Kleaf, sin fabricar versiones ni tocar ELF.
 5. Verificar ELF AArch64, imports/CRC con ese `Module.symvers`, firma y SHA-256;
    publicar el resultado en Actions sin declarar validación en dispositivo.
 
-No se han iniciado compilaciones completas para esta solicitud. No se ha
-cargado ningún módulo, flasheado el teléfono ni alterado firmas o protecciones.
+Se completó una compilación externa de los módulos reutilizando el kernel
+oficial precompilado. No se ha cargado ningún módulo, flasheado el teléfono ni
+alterado firmas o protecciones.
 
 ## Validaciones previas al build de módulos
 

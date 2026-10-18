@@ -250,9 +250,9 @@
     "register_user_hw_breakpoint",
     "unregister_hw_breakpoint"
   ],
-  "inference": "The exact official Module.symvers confirms these three APIs are not exported. The GKI memory-only profile omits this backend; compiled CRC verification remains pending.",
-  "target_crc_comparison_performed": false,
-  "target_module_built": false,
+  "inference": "Exact official exports confirm the three breakpoint APIs are absent. The compiled memory-only profile omits the backend and passes CRC/allowlist checks; phone operations remain untested.",
+  "target_crc_comparison_performed": true,
+  "target_module_built": true,
   "device_abi_verified": false,
   "effective_exports_audit": {
     "artifact": "kernel_aarch64_Module.symvers",
@@ -264,5 +264,15 @@
       "register_user_hw_breakpoint",
       "unregister_hw_breakpoint"
     ]
+  },
+  "target_build_result": {
+    "run_id": 39088889251,
+    "crc_matches": {
+      "rt_a17": 45,
+      "rt_a17_diag": 9
+    },
+    "all_imports_in_gki_allowlist": true,
+    "breakpoints_available": false,
+    "device_tested": false
   }
 }

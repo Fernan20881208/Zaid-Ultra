@@ -1,5 +1,10 @@
 # RT para GKI 14987696 / Moto g55 taipei
 
+**Build verificado en Actions #39088889251:** `rt_a17.ko` v0.3-memory
+(45 CRC) y `rt_a17_diag.ko` (9 CRC), ambos ELF AArch64, vermagic exacto y sin
+firma. [Informe y descarga](../reports/moto-g55-build-39088889251.md) ·
+[Perfil compilado](taipei-14987696-profile.json).
+
 Este perfil usa el kernel oficial precompilado `kernel_aarch64` del build
 14987696 y su DDK preparado. La configuración recibida del teléfono coincide
 exactamente con ese build. No genera una imagen de kernel ni un binario para
