@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "source_commit": "53625d1b977deb0be3e171c09956aed9d56dd298",
+  "build_id": "14987696",
+  "rt_integration": "builtin",
+  "mode": "kernel",
+  "device": "moto-g55-taipei",
+  "reason": "Compile the actual ARM64 kernel Image with the full implemented memory and one-shot breakpoint backend after local static, Kleaf --nobuild and exact Kconfig checks."
+}
