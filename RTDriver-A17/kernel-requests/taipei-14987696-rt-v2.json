@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "source_commit": "a22aa95fe89b07d4a45e7453df29b741474a4d53",
+  "build_id": "14987696",
+  "rt_integration": "builtin",
+  "mode": "kernel",
+  "device": "moto-g55-taipei",
+  "supersedes_run": 39146925021,
+  "reason": "Full kernel with the reviewed perf lock-order fix; the regression fails before the fix and passes afterwards. Static checks, Kleaf --nobuild and exact Kconfig checks passed. Supersede the earlier source to avoid distributing its breakpoint locking defect."
+}
