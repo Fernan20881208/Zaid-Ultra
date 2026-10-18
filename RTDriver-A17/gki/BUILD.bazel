@@ -5,14 +5,14 @@ load("@kleaf//build/kernel/kleaf:kernel.bzl", "ddk_module")
 ddk_module(
     name = "rt_a17_diag",
     out = "rt_a17_diag.ko",
-    kernel_build = "@gki_prebuilts//:kernel_aarch64",
+    kernel_build = "@gki_prebuilts//kernel_aarch64:kernel_aarch64",
     srcs = ["rt_port/rt_a17_diag.c", "rt_port/rt_abi.h"],
 )
 
 ddk_module(
     name = "rt_a17",
     out = "rt_a17.ko",
-    kernel_build = "@gki_prebuilts//:kernel_aarch64",
+    kernel_build = "@gki_prebuilts//kernel_aarch64:kernel_aarch64",
     srcs = [
         "rt_port/runtime/rt_main.c",
         "rt_port/runtime/rt_breakpoints.h",

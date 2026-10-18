@@ -117,3 +117,21 @@ archivo oficial generado por Kbuild/Kleaf, sin fabricar versiones ni tocar ELF.
 
 No se han iniciado compilaciones completas para esta solicitud. No se ha
 cargado ningún módulo, flasheado el teléfono ni alterado firmas o protecciones.
+
+## Validaciones previas al build de módulos
+
+- Pruebas estáticas de Actions
+  [39088596619](https://github.com/Fernan20881208/Zaid-Ultra/actions/runs/39088596619): satisfactorias.
+- Reempaquetado y comprobación del build A17 anterior
+  [39088596652](https://github.com/Fernan20881208/Zaid-Ultra/actions/runs/39088596652): satisfactorios;
+  se toman las fuentes del commit del binario original y se conservan sus hashes.
+- DDK local: todos los artifacts y revisiones fijados se recuperaron, y Clang
+  coincide con el identificador completo Android 14043575 de la configuración.
+- Kleaf `build --nobuild --config=stamp //rt:rt_a17_diag //rt:rt_a17`:
+  **2 targets analizados, 68 paquetes, 19103 targets configurados, 0 acciones**.
+  Se usó el modo Bazel `--batch` por las limitaciones del servidor de procesos
+  de este entorno local; no se ejecutó una compilación.
+
+El análisis detectó y permitió corregir dos errores antes del build: incluir
+el subárbol oficial `kleaf` en el checkout selectivo de Clang y usar el paquete
+real `@gki_prebuilts//kernel_aarch64:kernel_aarch64`, generado por el DDK.

@@ -73,11 +73,12 @@ def clone_project(project, kleaf):
             "--depth=1", "--filter=blob:none", "origin", revision)
         # Retain only the toolchain versions used by this build. All source
         # and compiler contents still come from their pinned official commits.
-        sparse = {"prebuilts/clang/host/linux-x86": ["clang-r536225"],
-                  "prebuilts/rust": ["linux-x86/1.82.0"]}.get(path)
-        if sparse:
-            run("git", "-C", target, "sparse-checkout", "init", "--cone")
-            run("git", "-C", target, "sparse-checkout", "set", *sparse)
+    sparse = {"prebuilts/clang/host/linux-x86": ["clang-r536225", "kleaf"],
+              "prebuilts/rust": ["linux-x86/1.82.0", "kleaf"]}.get(path)
+    if sparse:
+        run("git", "-C", target, "sparse-checkout", "init", "--cone")
+        run("git", "-C", target, "sparse-checkout", "set", *sparse)
+    if found != revision:
         run("git", "-C", target, "checkout", "--detach", revision)
     found = subprocess.check_output(["git", "-C", str(target), "rev-parse", "HEAD"],
                                     text=True).strip()
