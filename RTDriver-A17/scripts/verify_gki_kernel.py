@@ -57,8 +57,15 @@ def verify(workspace, report):
         raise ValueError(f"{len(differences)} exported-symbol/CRC differences; keep binaries as diagnostic evidence")
     with (report / "vmlinux").open("rb") as handle:
         elf = handle.read(64)
-    if elf[:6] != b"\x7fELF\x02\x01" or struct.unpack_from("<HH", elf, 16) != (2, 183):
-        raise ValueError("vmlinux must be an ELF64 little-endian AArch64 executable")
+    if len(elf) < 64 or elf[:6] != b"\x7fELF\x02\x01":
+        raise ValueError("vmlinux must be an ELF64 little-endian linked kernel")
+    elf_type, machine = struct.unpack_from("<HH", elf, 16)
+    # The stock ARM64 kernel is ET_DYN (3): arch/arm64/Makefile links with
+    # -shared -Bsymbolic for CONFIG_RELOCATABLE=y. ET_REL is only an object
+    # file and must never count as a linked kernel image.
+    expected_type = 3 if config(report / "kernel.config").get("CONFIG_RELOCATABLE") == "y" else 2
+    if machine != 183 or elf_type != expected_type:
+        raise ValueError("vmlinux ELF type/architecture disagrees with its ARM64 configuration")
     image = (report / "Image").read_bytes()
     if len(image) < 4096 or image[56:60] != b"ARM\x64":
         raise ValueError("Not an ARM64 Linux Image")
@@ -74,7 +81,7 @@ def verify(workspace, report):
                 "register_user_hw_breakpoint", "modify_user_hw_breakpoint", "unregister_hw_breakpoint"}
     if not required <= symbols or not any("initcall" in s and "rt_a17_init" in s for s in symbols):
         raise ValueError("Missing linked RT/breakpoint symbols or its built-in initcall")
-    builtin = "drivers/misc/rt_a17/runtime/rt_a17.ko"
+    builtin = "kernel/drivers/misc/rt_a17/runtime/rt_a17.ko"
     if builtin not in (report / "modules.builtin").read_text().splitlines():
         raise ValueError("RT absent from modules.builtin")
     if b"rt_a17.version=0.2" not in (report / "modules.builtin.modinfo").read_bytes():
@@ -100,6 +107,7 @@ def verify(workspace, report):
         raise ValueError("No matching rebuilt GKI modules supplied")
     evidence = json.loads((report / "kernel-input-verification.json").read_text())
     evidence.update({"kernel_rebuilt": True, "kernel_release": release,
+                     "vmlinux_elf_type": "ET_DYN" if elf_type == 3 else "ET_EXEC",
                      "configuration_diff": compare, "matching_exported_crcs": len(actual),
                      "linked_rt_symbols": sorted(required), "rt_initcall_present": True,
                      "gki_modules_signed": module_count, "gki_module_signers": sorted(module_signers),

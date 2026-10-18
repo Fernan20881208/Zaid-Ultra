@@ -30,6 +30,12 @@ Se publican Image, Image.gz, Image.lz4, vmlinux, Module.symvers, configuración,
 módulos GKI, certificado público, hashes e informe, incluso como diagnóstico
 cuando falle una comprobación posterior. No se publica la clave privada.
 
+La comprobación posterior `rt-taipei-kernel-verify.yml` descarga el artefacto
+de esa ejecución y contrasta su commit de origen. Permite corregir/verificar
+los controles del informe sin repetir la compilación del kernel. vmlinux es
+ET_DYN cuando CONFIG_RELOCATABLE=y, como en el binario oficial; modules.builtin
+usa el prefijo `kernel/` generado por scripts/Makefile.vmlinux_o.
+
 La clave privada de Google no está disponible. Kbuild genera una nueva clave
 para los módulos GKI de esta compilación. Se preserva MODULE_SIG_PROTECT;
 los módulos protegidos stock firmados por Google no se dan por aceptados

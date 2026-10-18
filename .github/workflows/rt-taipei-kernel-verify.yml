@@ -1,0 +1,77 @@
+name: Moto g55 - verify built kernel
+on:
+  workflow_run:
+    workflows: ['Moto g55 - kernel with built-in RT']
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: rt-taipei-kernel-*
+          merge-multiple: true
+          path: rt-kernel-results
+      - name: Check source provenance and detect an actual kernel image
+        id: source
+        shell: bash
+        env:
+          EXPECTED_SOURCE: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          r = Path('rt-kernel-results')
+          if (r / 'source-commit.txt').read_text().strip() != os.environ['EXPECTED_SOURCE']:
+              raise ValueError('Artifact source differs from triggering source-kernel workflow')
+          (r / 'source-run.txt').write_text(os.environ['SOURCE_RUN'] + '\n')
+          PY
+          git rev-parse HEAD > rt-kernel-results/verification-source-commit.txt
+          if [[ -s rt-kernel-results/vmlinux && -s rt-kernel-results/Image ]]; then
+            echo 'has_image=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_image=false' >> "$GITHUB_OUTPUT"
+            echo 'Source job produced no kernel image; its evidence remains in the source run.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Verify the existing binary without compiling again
+        if: steps.source.outputs.has_image == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends kmod
+          python3 - "$RUNNER_TEMP/kernel-reference" <<'PY'
+          import json, sys
+          from pathlib import Path
+          sys.path.insert(0, 'RTDriver-A17/scripts')
+          from prepare_gki_ddk import LOCK, download_one
+          from prepare_gki_kernel import REFERENCE_FILES
+          root = Path(sys.argv[1])
+          ref = root / 'reference'
+          ref.mkdir(parents=True)
+          lock = json.loads(LOCK.read_text())
+          for name in REFERENCE_FILES:
+              download_one(name, lock['files'][name], lock, root / 'cache', ref)
+          PY
+          python3 RTDriver-A17/scripts/verify_gki_kernel.py \
+            --workspace "$RUNNER_TEMP/kernel-reference" --report rt-kernel-results
+          cat rt-kernel-results/kernel-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish verified binaries, hashes and evidence
+        if: always() && steps.source.outputs.has_image == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rt-taipei-kernel-verified-${{ github.event.workflow_run.id }}
+          path: rt-kernel-results/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
