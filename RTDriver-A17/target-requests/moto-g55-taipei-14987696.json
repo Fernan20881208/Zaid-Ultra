@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "target_id": "moto-g55-taipei-14987696",
+  "status": "awaiting_device_config_and_exact_symvers",
+  "observation_source": "User-provided Termux and device screenshots; transcribed, not live device access",
+  "device": {
+    "manufacturer": "Motorola",
+    "model": "moto g55 5G",
+    "codename": "taipei",
+    "build_incremental": "4720d-615a8a",
+    "root_observed": true,
+    "root_context": "u:r:magisk:s0",
+    "uname_release": "6.12.58-android16-6-gb0a9599c6c01-ab14987696-4k",
+    "uname_machine": null,
+    "rt_a17_loaded": false,
+    "rt_a17_diag_loaded": false
+  },
+  "matching_public_source": {
+    "repository": "https://android.googlesource.com/kernel/common",
+    "tag": "android16-6.12-2025-12_r26",
+    "commit": "b0a9599c6c01ec540e2252ca3a0e87b5b8c47c97",
+    "build_id": 14987696,
+    "build_target": "kernel_aarch64",
+    "branch": "android16-6.12",
+    "kmi_generation": 6,
+    "clang_version": "r536225",
+    "stock_motorola_binary_identity_verified": false
+  },
+  "missing_kmi_list_imports": [
+    "modify_user_hw_breakpoint",
+    "register_user_hw_breakpoint",
+    "unregister_hw_breakpoint"
+  ],
+  "required_inputs": [
+    "root-readable /proc/version",
+    "uname -m",
+    "Actual device kernel .config, preferably /proc/config.gz",
+    "Module.symvers and full build configuration of the corresponding kernel",
+    "Module signing enforcement and allowed exported symbols for that build"
+  ],
+  "build_checks_passed": false,
+  "device_abi_verified": false,
+  "device_operations_tested": false,
+  "functional_verified": false,
+  "included_in_compiled_profiles": false,
+  "report": "../reports/moto-g55-taipei-preflight.md",
+  "kmi_audit": "../reports/moto-g55-taipei-kmi-audit.json"
+}

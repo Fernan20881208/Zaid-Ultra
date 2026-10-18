@@ -19,6 +19,12 @@ los 6.12; otros dispositivos necesitan sus fuentes, configuración, toolchain y
 existente sin repetir la compilación del kernel ni cargar módulos.
 [Paquete verificado en Actions #39080963343](reports/rt-612-kit-39080963343.md).
 
+**Motorola moto g55 5G (`taipei`), 6.12.58:** fuente pública coincidente
+identificada, pendiente de configuración y `Module.symvers` exactos. Tres
+imports del backend de breakpoints no aparecen en las listas KMI examinadas;
+todavía no hay un `.ko` compilado para este perfil.
+[Investigación y datos necesarios](reports/moto-g55-taipei-preflight.md).
+
 **Resultado actual (2026-10-17):** `rt_a17_diag.ko` v0.2 compilado y verificado
 como ELF relocatable AArch64 en Actions #39058053061. Vermagic completo exacto,
 8 CRC coincidentes con el Module.symvers generado, sin firma. Es solo diagnóstico;

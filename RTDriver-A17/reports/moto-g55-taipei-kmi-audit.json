@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "scope": "Published source KMI lists; not target Module.symvers or device validation",
+  "source_commit": "b0a9599c6c01ec540e2252ca3a0e87b5b8c47c97",
+  "source_url": "https://android.googlesource.com/kernel/common/+/b0a9599c6c01ec540e2252ca3a0e87b5b8c47c97/",
+  "comparison_module": {
+    "profile": "samsung-a17-czi4",
+    "actions_run": 39075095531,
+    "module_sha256": "b386c4f8755662224e41217389c318949206629c91f7a95e91aaf2b1d778706d",
+    "verification_json_sha256": "042a61d088a967544716ee9e2accaf9f85bfbe7e6451e281d6e67b3a8dc5a969"
+  },
+  "source_files": [
+    {
+      "path": "BUILD.bazel",
+      "sha256": "60a50a60a01d7972acad545ab3631d5a086db3188e27fe7e047bab078c966a2c"
+    },
+    {
+      "path": "build.config.constants",
+      "sha256": "660e45e19b31d35967dfc6ec3e1da468d2ec9ab772b5763818399e29488f4fd7"
+    },
+    {
+      "path": "arch/arm64/configs/gki_defconfig",
+      "sha256": "03d87e8c4acb22582698ab442c6ca83be1312948c80e6d6922a9bbaad683f8f9"
+    },
+    {
+      "path": "kernel/fork.c",
+      "sha256": "a0abfd03fe6f5d42dd2b53c311b57c5a74e131747ca2cc1210847deb053c30b4"
+    }
+  ],
+  "kmi_list_inputs": [
+    {
+      "path": "gki/aarch64/symbols/allwinner",
+      "sha256": "65c2a992de45def0b938d41b093d2839ba5af28d95baed3676a237c21537dddc"
+    },
+    {
+      "path": "gki/aarch64/symbols/amlogic",
+      "sha256": "43d9906998b34ccecd53a0e3a0b8aaae39e57f0d019a19c727a6d86a4d991eff"
+    },
+    {
+      "path": "gki/aarch64/symbols/asr",
+      "sha256": "cc33d354da3157d177cddaaf224642c2410ee3d86c1d13f454436f6eef6902da"
+    },
+    {
+      "path": "gki/aarch64/symbols/base",
+      "sha256": "982ed088db110d846108e645366a5c7bb91c7419a38e3f728ed8a03c88ade53c"
+    },
+    {
+      "path": "gki/aarch64/symbols/bcmstb",
+      "sha256": "0bde59aafeb065a4c9b214b1b23463135e73e1cbee442c478e8e04e77ac8359b"
+    },
+    {
+      "path": "gki/aarch64/symbols/cix",
+      "sha256": "5373f480146c157adbe867af8b23c24b9a027dc6b15aa0a8d7fe2a09461d42a0"
+    },
+    {
+      "path": "gki/aarch64/symbols/db845c",
+      "sha256": "8c487e972cdbe720712cc5eb75a4fc5b4bbc85b194d705e027d68c14c8d4a812"
+    },
+    {
+      "path": "gki/aarch64/symbols/desktop",
+      "sha256": "c16db974f60df81210902a1cfa7d8df847e00ccc3e04dbc78c5d3fb87f38c7d8"
+    },
+    {
+      "path": "gki/aarch64/symbols/exynos",
+      "sha256": "81192e8eacb57679a6dcb1729a64a0e8c43a8b852ed4c304a74833ab2ad6ffe8"
+    },
+    {
+      "path": "gki/aarch64/symbols/exynosauto",
+      "sha256": "1c5f5f7192391ed16db91a148840001c58304bda8d5fd6acc52af5d88e042d33"
+    },
+    {
+      "path": "gki/aarch64/symbols/fips140",
+      "sha256": "3d29570c44e8eab299977a81f3819f8e863ee8a3a9d3a9291aeffcf7e8d740ce"
+    },
+    {
+      "path": "gki/aarch64/symbols/galaxy",
+      "sha256": "eb97ffd8da3b4208dcf01706a1dd36d52a99950440dc602a034fe90ec9b9cc6e"
+    },
+    {
+      "path": "gki/aarch64/symbols/honor",
+      "sha256": "4e818bf89b0df58e054496d7db5332ba5de9a18b81d3727cf084b42dfd69d138"
+    },
+    {
+      "path": "gki/aarch64/symbols/imx",
+      "sha256": "a42868a120e85b92f91bf23de35a52b9f13fca213bb6d14cfa7f5d915a508939"
+    },
+    {
+      "path": "gki/aarch64/symbols/kunit",
+      "sha256": "8903c9eefe386b5a903ea3727cadab4b6c7283b54c42472c84eb396ed64d91f2"
+    },
+    {
+      "path": "gki/aarch64/symbols/lenovo",
+      "sha256": "71597d88a4811646b8839dc60c8ec9271ba50b95008cadc01cb2c6aef1dd9d3a"
+    },
+    {
+      "path": "gki/aarch64/symbols/meizu",
+      "sha256": "06102e94039375f572ba378ee4b27e3be297f9495268a49787079560db7b5682"
+    },
+    {
+      "path": "gki/aarch64/symbols/mtk",
+      "sha256": "7e835c5c75ff681bf701ddae0e6dc39129a3aa48338af12c1563d40f73510442"
+    },
+    {
+      "path": "gki/aarch64/symbols/mtktv",
+      "sha256": "30d254aa08e238a151ab04f70ee93f0d84722153a8292718282a7daa952b8720"
+    },
+    {
+      "path": "gki/aarch64/symbols/oplus",
+      "sha256": "ce6ef881a2c2a6f95d107e39b8c0028ac1b711b2501ce8d7b62008426250c125"
+    },
+    {
+      "path": "gki/aarch64/symbols/pixel",
+      "sha256": "28f2bc7d807dad6d47e93212e3304f2e81f03a56421e999e724fbd1d096a891d"
+    },
+    {
+      "path": "gki/aarch64/symbols/pixel_watch",
+      "sha256": "f223527d3860c228b8be749c5a080fb08d541a02dea61c7a634cd25000b11074"
+    },
+    {
+      "path": "gki/aarch64/symbols/qcom",
+      "sha256": "749ca4a3d517fcade05dd38f2747e7875598beb69a0590666e1d71bc98331e31"
+    },
+    {
+      "path": "gki/aarch64/symbols/rockchip",
+      "sha256": "e194de0e3fa1f5982abdbbc7ef7de98c1199ee52cb0ad713287e64fa6dd024e3"
+    },
+    {
+      "path": "gki/aarch64/symbols/rtkstb",
+      "sha256": "fa889c71b59a1adf3d25599387036399f8f77cad05371a276b3a599b8b3925f4"
+    },
+    {
+      "path": "gki/aarch64/symbols/rtktv",
+      "sha256": "21b1c33d31e166a807615087ebcabcd5d6818da17ecbd02446ef4a6bf14248d3"
+    },
+    {
+      "path": "gki/aarch64/symbols/syna",
+      "sha256": "8b1839767ee1d20a229310385726b7e148f5faff668fc64667b3022e7f190c14"
+    },
+    {
+      "path": "gki/aarch64/symbols/tcl",
+      "sha256": "c79d2a489d4b6af82baceddcbfe419ba632d42bead47886ee30b25b0b78a5d3d"
+    },
+    {
+      "path": "gki/aarch64/symbols/telechips",
+      "sha256": "71d18957f5fee8a42379285cf08fb4cd3047e3590a25b8a823a0680d685959f8"
+    },
+    {
+      "path": "gki/aarch64/symbols/transsion",
+      "sha256": "cdec7027be705ae47de76090a172c105f3be0fd933ac7dc7fbd4f701ce1038c3"
+    },
+    {
+      "path": "gki/aarch64/symbols/trusty",
+      "sha256": "cf88fe6586e1d494c36fedc309326368612da04ca360f9781a867dec7eed16ae"
+    },
+    {
+      "path": "gki/aarch64/symbols/tuxera",
+      "sha256": "c584cac896ee61640c601b9a034560cda74f61b600baca0c7ccc3bb1abd8cd41"
+    },
+    {
+      "path": "gki/aarch64/symbols/type_visibility",
+      "sha256": "f81db6e4b95bc20da861431c272c6b54da2cb1557a1d8b19469986ed340099ac"
+    },
+    {
+      "path": "gki/aarch64/symbols/unisoc",
+      "sha256": "efb783e8f815bdcb4fc773fe446bb3d17a9b44b2a762d000b17293f2434b689c"
+    },
+    {
+      "path": "gki/aarch64/symbols/virtual_device",
+      "sha256": "5b2253c0f7141c3b962a948cff728fd6d0dea255baf30aad8151bb1b32ec6043"
+    },
+    {
+      "path": "gki/aarch64/symbols/vivo",
+      "sha256": "91f4807fc64443ff214303aa60ff68213e84d8e2a398a3b126cdf4c37e5195b5"
+    },
+    {
+      "path": "gki/aarch64/symbols/xiaomi",
+      "sha256": "e89a52fd694e6a3e2e988708c4729fbd769c580543fe85a4fa0f2624feb1828c"
+    },
+    {
+      "path": "gki/aarch64/symbols/zte",
+      "sha256": "ad26977eebc7d4f72a29d0ca6487f1952dc9c4fc51813d465e7fb8e1ea836a09"
+    }
+  ],
+  "lists_checked": 38,
+  "listed_symbols": 9856,
+  "rt_crc_symbols_checked": [
+    "__arch_copy_from_user",
+    "__arch_copy_to_user",
+    "__check_object_size",
+    "__fortify_panic",
+    "__kmalloc_cache_noprof",
+    "__kmalloc_large_noprof",
+    "__kmalloc_noprof",
+    "__mmap_lock_do_trace_acquire_returned",
+    "__mmap_lock_do_trace_released",
+    "__mmap_lock_do_trace_start_locking",
+    "__mmdrop",
+    "__mutex_init",
+    "__put_cred",
+    "__put_task_struct",
+    "__stack_chk_fail",
+    "__tracepoint_mmap_lock_acquire_returned",
+    "__tracepoint_mmap_lock_released",
+    "__tracepoint_mmap_lock_start_locking",
+    "_raw_spin_lock_irqsave",
+    "_raw_spin_unlock_irqrestore",
+    "alt_cb_patch_nops",
+    "capable",
+    "d_path",
+    "down_read_killable",
+    "find_get_pid",
+    "find_vma",
+    "flush_dcache_page",
+    "get_pid_task",
+    "get_task_cred",
+    "get_task_mm",
+    "kasan_flag_enabled",
+    "kfree",
+    "kfree_sensitive",
+    "kmalloc_caches",
+    "ktime_get",
+    "mem_alloc_profiling_key",
+    "memcpy",
+    "memset",
+    "misc_deregister",
+    "misc_register",
+    "mm_access",
+    "mmput",
+    "modify_user_hw_breakpoint",
+    "module_layout",
+    "mutex_lock_interruptible",
+    "mutex_unlock",
+    "nonseekable_open",
+    "pin_user_pages_remote",
+    "put_pid",
+    "refcount_warn_saturate",
+    "register_user_hw_breakpoint",
+    "strchr",
+    "strcmp",
+    "strncpy_from_user",
+    "strrchr",
+    "task_active_pid_ns",
+    "unpin_user_pages",
+    "unpin_user_pages_dirty_lock",
+    "unregister_hw_breakpoint",
+    "up_read"
+  ],
+  "rt_symbols_not_in_kmi_lists": [
+    "modify_user_hw_breakpoint",
+    "register_user_hw_breakpoint",
+    "unregister_hw_breakpoint"
+  ],
+  "inference": "With trim_nonlisted_kmi=True these breakpoint imports may be unavailable to an external module. Confirm using the exact compiled Module.symvers.",
+  "target_crc_comparison_performed": false,
+  "target_module_built": false,
+  "device_abi_verified": false
+}
