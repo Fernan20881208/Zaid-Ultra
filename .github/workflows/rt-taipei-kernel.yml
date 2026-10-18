@@ -1,0 +1,65 @@
+name: Moto g55 - kernel with built-in RT
+on:
+  push:
+    branches: [main]
+    paths: ['RTDriver-A17/kernel-requests/taipei-*.json']
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        required: true
+        default: preflight
+        options: [preflight, kernel]
+permissions:
+  contents: read
+concurrency:
+  group: rt-taipei-source-kernel-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    uses: ./.github/workflows/a17-rt-static.yml
+  kernel:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      GKI_KERNEL_MODE: ${{ inputs.mode || 'preflight' }}
+      GKI_KERNEL_REPORT: ${{ github.workspace }}/rt-kernel-results
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve one explicit source-kernel build request
+        if: github.event_name == 'push'
+        run: python3 RTDriver-A17/scripts/resolve_gki_kernel_request.py >> "$GITHUB_ENV"
+      - name: Prepare host tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "GKI_KERNEL_WORKSPACE=$RUNNER_TEMP/rt-taipei-source" >> "$GITHUB_ENV"
+          mkdir -p "$GKI_KERNEL_REPORT"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends git curl python3 file kmod \
+            rsync zip make gcc g++ libelf-dev libssl-dev bison flex bc openssl
+          df -h . > "$GKI_KERNEL_REPORT/disk-at-start.txt"
+      - name: Pinned sources, static analysis, Kconfig gate and requested kernel build
+        shell: bash
+        run: bash RTDriver-A17/scripts/ci_build_gki_kernel.sh "$GKI_KERNEL_MODE"
+      - name: Preserve built kernel, matching GKI modules and diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rt-taipei-kernel-${{ github.run_number }}
+          path: rt-kernel-results/
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 6
+      - name: Publish verified scope
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "$GKI_KERNEL_REPORT/kernel-report.md" ]]; then
+            cat "$GKI_KERNEL_REPORT/kernel-report.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'No verified kernel image is claimed. Review the retained logs and evidence.' >> "$GITHUB_STEP_SUMMARY"
+          fi

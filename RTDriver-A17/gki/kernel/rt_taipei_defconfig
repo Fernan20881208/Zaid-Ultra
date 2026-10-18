@@ -1,0 +1,2 @@
+CONFIG_RT_A17=y
+CONFIG_LOCALVERSION="-4k-rt-taipei"

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config RT_A17
+	bool "RT diagnostic, data memory and one-shot user breakpoints"
+	depends on ARM64 && MMU && PERF_EVENTS && HAVE_HW_BREAKPOINT
+	default n
+	help
+	  Independently written RT ABI port, integrated into the kernel so that
+	  normal hardware breakpoint APIs do not require module exports.
+	  Access requires CAP_SYS_ADMIN and normal ptrace/LSM authorization;
+	  hardware breakpoints additionally require CAP_SYS_PTRACE.
+	  INIT_KEY and GYRO_CONFIG are unsupported. Device and original client
+	  validation remain necessary; this option does not certify either.

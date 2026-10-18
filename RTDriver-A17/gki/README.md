@@ -1,5 +1,9 @@
 # RT para GKI 14987696 / Moto g55 taipei
 
+El perfil de [kernel con RT integrado](kernel/README.md) recompila la imagen
+con el backend de memoria y breakpoints dentro de vmlinux. Es una ruta distinta
+del DDK externo descrito aquí; mantiene pendiente la validación en el teléfono.
+
 **Build verificado en Actions #39088889251:** `rt_a17.ko` v0.3-memory
 (45 CRC) y `rt_a17_diag.ko` (9 CRC), ambos ELF AArch64, vermagic exacto y sin
 firma. [Informe y descarga](../reports/moto-g55-build-39088889251.md) ·

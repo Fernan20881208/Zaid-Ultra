@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# This file is staged as runtime/Makefile. Preserve the external-module build.
+obj-y += rt_a17.o
+rt_a17-y := rt_main.o rt_breakpoints.o

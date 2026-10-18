@@ -94,6 +94,9 @@ jobs:
           (cd RTDriver-A17/scripts && python3 -m unittest test_mediafire_sources -v)
           (cd RTDriver-A17/multikernel && python3 -m unittest test_rt612 -v)
           (cd RTDriver-A17/scripts && python3 -m unittest test_gki_inputs -v)
+          (cd RTDriver-A17/scripts && python3 -m unittest test_gki_kernel -v)
+          bash -n RTDriver-A17/scripts/ci_build_gki_kernel.sh
+          python3 -m py_compile RTDriver-A17/scripts/prepare_gki_kernel.py RTDriver-A17/scripts/verify_gki_kernel.py RTDriver-A17/scripts/resolve_gki_kernel_request.py
           python3 -m py_compile RTDriver-A17/scripts/prepare_gki_ddk.py RTDriver-A17/scripts/verify_gki_rt.py
           bash -n RTDriver-A17/multikernel/check_kernel.sh
           python3 RTDriver-A17/scripts/inspect_a17_source_bundle.py --help >/dev/null
