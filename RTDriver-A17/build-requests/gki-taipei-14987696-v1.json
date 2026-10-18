@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "source_commit": "1a3d75f7c232d31215924544bf4d747983d3f28c",
+  "build_id": "14987696",
+  "mode": "modules",
+  "kernel_release": "6.12.58-android16-6-gb0a9599c6c01-ab14987696-4k",
+  "scope": "Build rt_a17_diag and the explicit memory-only RT profile against official prepared GKI outputs; no phone loading or kernel rebuild",
+  "preflight": "Host C contracts and Actions static checks passed; local Kleaf --nobuild resolved both targets with zero build actions"
+}
