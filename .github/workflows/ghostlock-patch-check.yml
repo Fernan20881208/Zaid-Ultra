@@ -1,0 +1,62 @@
+name: GhostLock backport applicability
+
+on:
+  push:
+    branches:
+      - ghostlock-redmi12s-audit
+  pull_request:
+    paths:
+      - "security/ghostlock-redmi-note-12s/**"
+      - ".github/workflows/ghostlock-patch-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  patch-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Zaid-Ultra
+        uses: actions/checkout@v4
+
+      - name: Fetch public Xiaomi reference source and apply-check patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          src_dir="$(mktemp -d)"
+          mkdir -p "$src_dir/kernel/locking"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/MiCode/Xiaomi_Kernel_OpenSource/sea-t-oss/kernel/locking/rtmutex.c" \
+            --output "$src_dir/kernel/locking/rtmutex.c"
+
+          cd "$src_dir"
+          git init -q
+          patch_file="$GITHUB_WORKSPACE/security/ghostlock-redmi-note-12s/patches/0001-rtmutex-use-waiter-task.patch"
+          git apply --check "$patch_file"
+          git apply "$patch_file"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("kernel/locking/rtmutex.c")
+          text = path.read_text()
+          start = text.index("static void remove_waiter(struct rt_mutex *lock,")
+          end = text.index("/*\n * Recheck the pi chain", start)
+          fn = text[start:end]
+          checks = [
+              "struct task_struct *waiter_task = waiter->task;",
+              "raw_spin_lock(&waiter_task->pi_lock);",
+              "waiter_task->pi_blocked_on = NULL;",
+              "raw_spin_unlock(&waiter_task->pi_lock);",
+              "next_lock, NULL, waiter_task);",
+          ]
+          missing = [item for item in checks if item not in fn]
+          if missing:
+              raise SystemExit("Patch content validation failed: " + repr(missing))
+          if "current->pi_blocked_on" in fn or "next_lock, NULL, current)" in fn:
+              raise SystemExit("Old current-task references remain in remove_waiter()")
+          print("PASS: backport applies and expected waiter_task changes are present.")
+          print("NOTE: this checks patch applicability only; it does not build a kernel")
+          print("and does not prove that sea-t-oss is the source for the installed firmware.")
+          PY
