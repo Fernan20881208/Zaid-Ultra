@@ -32,7 +32,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
  	struct task_struct *owner = rt_mutex_owner(lock);
 +	struct task_struct *waiter_task = waiter->task;
  	struct rt_mutex *next_lock;
-@@ -1075,7 +1078,7 @@
+@@ -1075,6 +1078,6 @@
  	lockdep_assert_held(&lock->wait_lock);
  
 -	raw_spin_lock(&current->pi_lock);
