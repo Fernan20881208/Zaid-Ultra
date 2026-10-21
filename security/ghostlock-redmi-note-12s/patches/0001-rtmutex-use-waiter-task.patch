@@ -11,28 +11,19 @@ Source tree: MiCode/Xiaomi_Kernel_OpenSource, ref sea-t-oss
 Source file blob at preparation time: a5ec4f68527e533fb25e447ed18e2efd179a21b5
 
 ---
- kernel/locking/rtmutex.c | 11 +++++++----
- 1 file changed, 7 insertions(+), 4 deletions(-)
+ kernel/locking/rtmutex.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1062,6 +1062,8 @@
- /*
-  * Remove a waiter from a lock and give up
-  *
-  * Must be called with lock->wait_lock held and interrupts disabled. I must
-  * have just failed to try_to_take_rt_mutex().
-+ *
-+ * When invoked from rt_mutex_start_proxy_lock(), waiter->task != current!
-  */
-@@ -1070,4 +1072,5 @@
+@@ -1070,14 +1070,15 @@
  {
  	bool is_top_waiter = (waiter == rt_mutex_top_waiter(lock));
  	struct task_struct *owner = rt_mutex_owner(lock);
 +	struct task_struct *waiter_task = waiter->task;
  	struct rt_mutex *next_lock;
-@@ -1075,6 +1078,6 @@
+ 
  	lockdep_assert_held(&lock->wait_lock);
  
 -	raw_spin_lock(&current->pi_lock);
@@ -42,10 +33,18 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 -	raw_spin_unlock(&current->pi_lock);
 +	waiter_task->pi_blocked_on = NULL;
 +	raw_spin_unlock(&waiter_task->pi_lock);
-@@ -1115,2 +1118,2 @@
+ 
+ 	/*
+ 	 * Only update priority if the waiter was the highest priority
+@@ -1113,7 +1114,7 @@
+ 	raw_spin_unlock_irq(&lock->wait_lock);
+ 
  	rt_mutex_adjust_prio_chain(owner, RT_MUTEX_MIN_CHAINWALK, lock,
 -				   next_lock, NULL, current);
 +				   next_lock, NULL, waiter_task);
+ 
+ 	raw_spin_lock_irq(&lock->wait_lock);
+ }
 
 -- 
 2.43.0
