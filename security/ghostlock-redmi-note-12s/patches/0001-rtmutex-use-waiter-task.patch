@@ -11,130 +11,41 @@ Source tree: MiCode/Xiaomi_Kernel_OpenSource, ref sea-t-oss
 Source file blob at preparation time: a5ec4f68527e533fb25e447ed18e2efd179a21b5
 
 ---
- kernel/locking/rtmutex.c | 9 +++++----
- 1 file changed, 5 insertions(+), 4 deletions(-)
+ kernel/locking/rtmutex.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index a5ec4f6..0000000 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1059,66 +1059,69 @@
- 	raw_spin_unlock(&current->pi_lock);
- }
- 
+@@ -1062,6 +1062,8 @@
  /*
   * Remove a waiter from a lock and give up
   *
   * Must be called with lock->wait_lock held and interrupts disabled. I must
   * have just failed to try_to_take_rt_mutex().
-- */
--static void remove_waiter(struct rt_mutex *lock,
--			  struct rt_mutex_waiter *waiter)
--{
--	bool is_top_waiter = (waiter == rt_mutex_top_waiter(lock));
--	struct task_struct *owner = rt_mutex_owner(lock);
--	struct rt_mutex *next_lock;
--
--	lockdep_assert_held(&lock->wait_lock);
--
--	raw_spin_lock(&current->pi_lock);
--	rt_mutex_dequeue(lock, waiter);
--	current->pi_blocked_on = NULL;
--	raw_spin_unlock(&current->pi_lock);
--
--	/*
--	 * Only update priority if the waiter was the highest priority
--	 * waiter of the lock and there is an owner to update.
--	 */
--	if (!owner || !is_top_waiter)
--		return;
--
--	raw_spin_lock(&owner->pi_lock);
--
--	rt_mutex_dequeue_pi(owner, waiter);
--
--	if (rt_mutex_has_waiters(lock))
--		rt_mutex_enqueue_pi(owner, rt_mutex_top_waiter(lock));
--
--	rt_mutex_adjust_prio(owner);
--
--	/* Store the lock on which owner is blocked or NULL */
--	next_lock = task_blocked_on_lock(owner);
--
--	raw_spin_unlock(&owner->pi_lock);
--
--	/*
--	 * Don't walk the chain, if the owner task is not blocked
--	 * itself.
--	 */
--	if (!next_lock)
--		return;
--
--	/* gets dropped in rt_mutex_adjust_prio_chain()! */
--	get_task_struct(owner);
--
--	raw_spin_unlock_irq(&lock->wait_lock);
--
--	rt_mutex_adjust_prio_chain(owner, RT_MUTEX_MIN_CHAINWALK, lock,
--				   next_lock, NULL, current);
 + *
 + * When invoked from rt_mutex_start_proxy_lock(), waiter->task != current!
-+ */
-+static void remove_waiter(struct rt_mutex *lock,
-+			  struct rt_mutex_waiter *waiter)
-+{
-+	bool is_top_waiter = (waiter == rt_mutex_top_waiter(lock));
-+	struct task_struct *owner = rt_mutex_owner(lock);
+  */
+@@ -1070,4 +1072,5 @@
+ {
+ 	bool is_top_waiter = (waiter == rt_mutex_top_waiter(lock));
+ 	struct task_struct *owner = rt_mutex_owner(lock);
 +	struct task_struct *waiter_task = waiter->task;
-+	struct rt_mutex *next_lock;
-+
-+	lockdep_assert_held(&lock->wait_lock);
-+
+ 	struct rt_mutex *next_lock;
+@@ -1075,7 +1078,7 @@
+ 	lockdep_assert_held(&lock->wait_lock);
+ 
+-	raw_spin_lock(&current->pi_lock);
 +	raw_spin_lock(&waiter_task->pi_lock);
-+	rt_mutex_dequeue(lock, waiter);
+ 	rt_mutex_dequeue(lock, waiter);
+-	current->pi_blocked_on = NULL;
+-	raw_spin_unlock(&current->pi_lock);
 +	waiter_task->pi_blocked_on = NULL;
 +	raw_spin_unlock(&waiter_task->pi_lock);
-+
-+	/*
-+	 * Only update priority if the waiter was the highest priority
-+	 * waiter of the lock and there is an owner to update.
-+	 */
-+	if (!owner || !is_top_waiter)
-+		return;
-+
-+	raw_spin_lock(&owner->pi_lock);
-+
-+	rt_mutex_dequeue_pi(owner, waiter);
-+
-+	if (rt_mutex_has_waiters(lock))
-+		rt_mutex_enqueue_pi(owner, rt_mutex_top_waiter(lock));
-+
-+	rt_mutex_adjust_prio(owner);
-+
-+	/* Store the lock on which owner is blocked or NULL */
-+	next_lock = task_blocked_on_lock(owner);
-+
-+	raw_spin_unlock(&owner->pi_lock);
-+
-+	/*
-+	 * Don't walk the chain, if the owner task is not blocked
-+	 * itself.
-+	 */
-+	if (!next_lock)
-+		return;
-+
-+	/* gets dropped in rt_mutex_adjust_prio_chain()! */
-+	get_task_struct(owner);
-+
-+	raw_spin_unlock_irq(&lock->wait_lock);
-+
-+	rt_mutex_adjust_prio_chain(owner, RT_MUTEX_MIN_CHAINWALK, lock,
+@@ -1115,2 +1118,2 @@
+ 	rt_mutex_adjust_prio_chain(owner, RT_MUTEX_MIN_CHAINWALK, lock,
+-				   next_lock, NULL, current);
 +				   next_lock, NULL, waiter_task);
  
- 	raw_spin_lock_irq(&lock->wait_lock);
- }
- 
- /*
-  * Recheck the pi chain, in case we got a priority setting
-  *
-  * Called from sched_setscheduler
+-- 
+2.43.0
