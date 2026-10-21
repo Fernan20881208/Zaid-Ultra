@@ -46,6 +46,6 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
  	rt_mutex_adjust_prio_chain(owner, RT_MUTEX_MIN_CHAINWALK, lock,
 -				   next_lock, NULL, current);
 +				   next_lock, NULL, waiter_task);
- 
+
 -- 
 2.43.0
