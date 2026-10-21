@@ -11,8 +11,8 @@ Source tree: MiCode/Xiaomi_Kernel_OpenSource, ref sea-t-oss
 Source file blob at preparation time: a5ec4f68527e533fb25e447ed18e2efd179a21b5
 
 ---
- kernel/locking/rtmutex.c | 7 +++++--
- 1 file changed, 5 insertions(+), 2 deletions(-)
+ kernel/locking/rtmutex.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 --- a/kernel/locking/rtmutex.c
